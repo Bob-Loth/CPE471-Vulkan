@@ -24,7 +24,15 @@
 struct WorldInfo {
     alignas(16) glm::mat4 View;
     alignas(16) glm::mat4 Perspective;
-    glm::vec3 lightPosition;
+    glm::vec4 lightPosition[8] = {
+        glm::vec4(2.0f, 2.0f, 2.0f, 1.0f),
+        glm::vec4(-2.0f, 2.0f, 2.0f, 1.0f),
+        glm::vec4(2.0f, 2.0f, -2.0f, 1.0f),
+        glm::vec4(-2.0f, 2.0f, -2.0f, 1.0f),
+        glm::vec4(2.0f, -2.0f, 2.0f, 1.0f),
+        glm::vec4(-2.0f, -2.0f, 2.0f, 1.0f),
+        glm::vec4(2.0f, -2.0f, -2.0f, 1.0f),
+        glm::vec4(-2.0f, -2.0f, -2.0f, 1.0f) };
 };
 
 // Model transform matrix which will be different for each object / draw call.
@@ -34,10 +42,10 @@ struct Transforms {
 
 // Additional uniform data that varies per-object / per-draw.
 struct AnimShadeData {
-    alignas(16) int shadeStyle = 0;
-    glm::vec3 diffuseData = glm::vec3(1.0f, 1.0f, 1.0f);
-    glm::vec3 ambientData = glm::vec3(0.1f, 0.1f, 0.1f);
-    glm::vec3 specularData = glm::vec3(0.5f, 0.5f, 0.5f);
+    glm::vec4 diffuseData = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+    glm::vec4 ambientData = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
+    glm::vec4 specularData = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    float shininess = 300.0f;
 };
 
 
@@ -291,8 +299,6 @@ void Application::initGeometry(){
     mObjectAnimShade["bunny"] = UniformAnimShadeData::create();
     mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
 
-    // Shade the Vulkan logo red
-    mObjectAnimShade["vulkan"]->getStruct().shadeStyle = 1;
 
     // Add object to the scene along with its uniform data
     VulkanGraphicsApp::addMultiShapeObject(

@@ -10,7 +10,7 @@ layout(location = 2) out vec3 W_lightDir;
 layout(binding = 0) uniform WorldInfo {
     mat4 V;
     mat4 P;
-    vec3 lightPos;
+    vec4 lightPos;
 } uWorld;
 
 layout(binding = 1) uniform Transform{
@@ -22,7 +22,7 @@ void main(){
     W_fragPos = uModel.Model * vertPos; // Fragment position in world space
     W_fragNor = mat3(uModel.Model) * vertNor.xyz; // Fragment normal in world space
     
-    W_lightDir = uWorld.lightPos - (uModel.Model*vertPos).xyz; // light vector
+    W_lightDir = uWorld.lightPos.xyz - (uModel.Model*vertPos).xyz; // light vector
 
     gl_Position = uWorld.P * uWorld.V * W_fragPos; // p*v*m
 }
