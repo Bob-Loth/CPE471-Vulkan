@@ -32,7 +32,8 @@ struct WorldInfo {
         glm::vec4(2.0f, -2.0f, 2.0f, 1.0f),
         glm::vec4(-2.0f, -2.0f, 2.0f, 1.0f),
         glm::vec4(2.0f, -2.0f, -2.0f, 1.0f),
-        glm::vec4(-2.0f, -2.0f, -2.0f, 1.0f) };
+        glm::vec4(-2.0f, -2.0f, -2.0f, 1.0f)
+    };
 };
 
 // Model transform matrix which will be different for each object / draw call.
@@ -43,7 +44,7 @@ struct Transforms {
 // Additional uniform data that varies per-object / per-draw.
 struct AnimShadeData {
     glm::vec4 diffuseData = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
-    glm::vec4 ambientData = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
+    glm::vec4 ambientData = glm::vec4(0.05f, 0.05f, 0.05f, 1.0f);
     glm::vec4 specularData = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
     float shininess = 300.0f;
 };
@@ -266,7 +267,7 @@ void Application::render(double dt){
 
     // Global time
     float gt = static_cast<float>(glfwGetTime());
-
+    
     // Spin the logo in place. 
     logoTfs->getStruct().Model = glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0));
 

@@ -1,7 +1,8 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\src",
+    "\\src\\data"
   ],
-  "SelectedNode": "\\shaders",
   "PreviewInSolutionExplorer": false
 }
