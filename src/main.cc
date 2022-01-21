@@ -9,12 +9,15 @@
 #include <iostream>
 #include <limits>
 #include <memory> // Include shared_ptr
+#include <map>
+#include <string>
 
 #define ENABLE_GLM_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // The code below defines the types and formatting for uniform data used in our shaders. 
@@ -43,10 +46,20 @@ struct Transforms {
 
 // Additional uniform data that varies per-object / per-draw.
 struct AnimShadeData {
-    glm::vec4 diffuseData = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+    glm::vec4 diffuseData = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
     glm::vec4 ambientData = glm::vec4(0.05f, 0.05f, 0.05f, 1.0f);
-    glm::vec4 specularData = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    glm::vec4 specularData = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
     float shininess = 300.0f;
+
+    //default steely material
+    AnimShadeData() {}; 
+    //Use to edit diffuse and shininess only
+    AnimShadeData(glm::vec4 dif, float shn) :
+        diffuseData(dif), shininess(shn) {}
+    //Use to fully control material properties
+    AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn) :
+        diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn) {}
+
 };
 
 
@@ -285,6 +298,29 @@ void Application::render(double dt){
     VulkanGraphicsApp::render();
 } 
 
+
+void initBlinnPhongColorMap(unordered_map<string, AnimShadeData> *map) {
+    (*map)["cyan"] = AnimShadeData(
+        glm::vec4(0.0, 1.0, 1.0, 1.0),
+        glm::vec4(0.05, 0.05, 0.05, 1.0),
+        glm::vec4(0.5, 0.5, 0.5, 1.0),
+        100.0f
+    );
+    (*map)["red"] = AnimShadeData(
+        glm::vec4(1.0, 0.0, 0.0, 1.0),
+        glm::vec4(0.05, 0.05, 0.05, 1.0),
+        glm::vec4(0.5, 0.5, 0.5, 1.0),
+        100.0f
+    );
+    //example of setting diffuse and shininess only
+    (*map)["purple"] = AnimShadeData(
+        glm::vec4(0.5, 0.1, 0.7, 1.0),
+        50.0f
+    );
+    //example of default initialization
+    (*map)["steel"] = AnimShadeData();
+}
+
 void Application::initGeometry(){
     // Load obj files 
     mObjects["vulkan"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/vulkan.obj");
@@ -305,6 +341,15 @@ void Application::initGeometry(){
     mObjectAnimShade["bunny"] = UniformAnimShadeData::create();
     mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
     mObjectAnimShade["ballTex"] = UniformAnimShadeData::create();
+    
+    //Make a color map
+    auto BlPhColors = unordered_map<string, AnimShadeData>();
+    initBlinnPhongColorMap(&BlPhColors);
+
+    //set uniform shading data to colors defined in color map
+    mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
+    mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
+    mObjectAnimShade["monkey"]->setStruct(BlPhColors["purple"]);
 
     // Add object to the scene along with its uniform data
     VulkanGraphicsApp::addMultiShapeObject(
