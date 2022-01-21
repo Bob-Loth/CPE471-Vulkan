@@ -33,6 +33,7 @@ std::vector<std::string> VulkanSetupCore::gatherInstanceExtensions(){
     std::set<std::string> required(selfRequired.begin(), selfRequired.end());
     std::set<std::string> requested(selfRequested.begin(), selfRequested.end());
     requested.emplace("VK_KHR_get_physical_device_properties2");
+    
     for(const VulkanProviderInterface* dependent : _mDependentProviders){
         const std::vector<std::string>& dRequested = dependent->getRequestedInstanceExtensions();
         const std::vector<std::string>& dRequired = dependent->getRequiredInstanceExtensions();
@@ -70,6 +71,8 @@ std::vector<std::string> VulkanSetupCore::gatherDeviceExtensions(){
     std::set<std::string> required(selfRequired.begin(), selfRequired.end());
     std::set<std::string> requested(selfRequested.begin(), selfRequested.end());
     requested.emplace("VK_KHR_portability_subset");
+    requested.emplace("VK_KHR_maintenance3");
+    requested.emplace("VK_EXT_descriptor_indexing");
     for(const VulkanProviderInterface* dependent : _mDependentProviders){
         const std::vector<std::string>& dRequested = dependent->getRequestedDeviceExtensions();
         const std::vector<std::string>& dRequired = dependent->getRequiredDeviceExtensions();

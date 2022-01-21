@@ -397,6 +397,7 @@ void Application::initUniforms(){
         // {<binding point>, <structure layout>}
         {1, UniformTransformData::sGetLayout()}, // Transform data on binding point #1
         {2, UniformAnimShadeData::sGetLayout()} // Extra data on binding point #2
+        
     };
     VulkanGraphicsApp::initMultiShapeUniformBuffer(mUniformLayoutSet);
 

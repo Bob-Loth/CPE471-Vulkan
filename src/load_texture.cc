@@ -14,11 +14,33 @@ TextureLoader::~TextureLoader() {
     texChannels = nullptr;
 }
 //load a single texture
+
+void TextureLoader::createTextureBuffer(VkDeviceSize size, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+    VkBufferCreateInfo bufferInfo{
+        VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, //the type of this structure
+        nullptr, // no structure extending this structure
+        VkBufferCreateFlags(),
+        size,
+        bufferUsage,
+        VK_SHARING_MODE_EXCLUSIVE, //no access from other queue families, see https://vulkan.lunarg.com/doc/view/1.2.154.1/windows/tutorial/html/03-init_device.html
+        0, //number of entries in the pQueueFamilyIndices array
+        nullptr //set to null if in EXCLUSIVE sharing mode
+    };
+    
+
+}
+
 void TextureLoader::createTextureImage(string imagePath){
+
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
     
 
 
+
     texSizes->emplace_back(make_pair<int, int>(0,0));
+    texChannels->emplace_back(0);
     stbi_uc* pixels = stbi_load(
         imagePath.c_str(), //the path of the image
         &texSizes->back().first, //width of the image

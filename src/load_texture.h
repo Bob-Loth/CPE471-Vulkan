@@ -21,6 +21,7 @@ class TextureLoader
 public:
 	TextureLoader();
 	~TextureLoader();
+	void createTextureBuffer(VkDeviceSize size, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void createTextureImage(std::string imagePath);
 	void createTextureImage(std::vector<std::string> imagePaths);
 private:
@@ -28,6 +29,7 @@ private:
 	std::unique_ptr <std::vector<int>> texChannels;
 	std::vector<VkBuffer> stagingBuffers;
 	std::vector<VkDeviceMemory> stagingBufferMemory;
+	
 };
 
 
