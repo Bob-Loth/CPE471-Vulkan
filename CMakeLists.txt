@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED 14)
 set(CMAKE_CXX_STANDARD 14)
 
 set(VK_ALLOC_LIB_TARGET "vk_mem_alloc")
-add_library(${VK_ALLOC_LIB_TARGET} STATIC "${PROJECT_SOURCE_DIR}/ext/vk_mem_alloc.h" "${PROJECT_SOURCE_DIR}/ext/vma_impl.cc")
+add_library(${VK_ALLOC_LIB_TARGET} STATIC "${PROJECT_SOURCE_DIR}/ext/vk_mem_alloc.h" "${PROJECT_SOURCE_DIR}/ext/vma_impl.cc" "src/load_texture.h" "ext/stb_image.h")
 setupVulkan(${VK_ALLOC_LIB_TARGET})
 
 # Helper function which sets up the correct library linking 
@@ -52,7 +52,7 @@ file(GLOB_RECURSE SOURCES "${PROJECT_SOURCE_DIR}/src/*.cc" "${PROJECT_SOURCE_DIR
 file(GLOB_RECURSE HEADERS "${PROJECT_SOURCE_DIR}/src/*.hpp" "${PROJECT_SOURCE_DIR}/src/*.h")
 
 # Add the executable for the project
-add_executable(${CMAKE_PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLSL})
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLSL} "src/load_texture.h" "ext/stb_image.h")
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
 setBuildProperties(${CMAKE_PROJECT_NAME})
