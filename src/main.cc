@@ -272,7 +272,7 @@ void Application::render(double dt){
     logoTfs->getStruct().Model = glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0));
     
     // Spin the ball opposite direction of logo, above it.
-    ballTfs->getStruct().Model = glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
+    ballTfs->getStruct().Model = glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
 
     // Rotate all other objects around the Vulkan logo in the center
     float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
