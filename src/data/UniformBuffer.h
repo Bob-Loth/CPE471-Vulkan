@@ -106,7 +106,7 @@ class UniformStructData : virtual public UniformDataInterface, virtual public Un
 
     /// Create a new UniformStructData object with uninitalized data> 
     static ptr_t create() {return(ptr_t(new UniformStructData<uniform_struct_t>()));}
-
+    
     static typename UniformStructDataLayout<UniformStruct, T_alignment_size>::ptr_t sGetLayout(){
         return(UniformStructDataLayout<UniformStruct, T_alignment_size>::create());
     }

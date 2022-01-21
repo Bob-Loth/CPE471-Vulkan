@@ -1,4 +1,5 @@
 build
 build_xcode
 .vscode
+.vs
 .DS_Store
