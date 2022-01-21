@@ -18,7 +18,7 @@ function(addGlslShaderDirectory targetName directory)
     file(GLOB GLSL_INCLUDE "${directory}/*.glsl" "${directory}/*.inl")
 
     # Create target for compiling all GLSL files in directory
-    add_custom_target(${targetName} SOURCES ${GLSL_INCLUDE})
+    add_custom_target(${targetName} SOURCES ${GLSL_INCLUDE} "src/load_texture.h" "ext/stb_image.h")
 
     # Loop over GLSL source files and create a compile target for each
     foreach(glslSource ${GLSL})
