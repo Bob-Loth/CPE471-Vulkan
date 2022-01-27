@@ -6,6 +6,7 @@
 #include "data/VertexInput.h"
 #include "utils/BufferedTimer.h"
 #include "load_obj.h"
+
 #include <iostream>
 #include <limits>
 #include <memory> // Include shared_ptr
@@ -89,7 +90,7 @@ class Application : public VulkanGraphicsApp
     void initGeometry();
     void initShaders();
     void initUniforms();
-
+    void initTextures();
     void render(double dt);
 
     /// Collection describing the overall layout of all uniform data being used. 
@@ -101,7 +102,7 @@ class Application : public VulkanGraphicsApp
     std::unordered_map<std::string, UniformTransformDataPtr> mObjectTransforms;
     /// Collection of extra per-object data. Contains an entry for each object in mObjects.
     std::unordered_map<std::string, UniformAnimShadeDataPtr> mObjectAnimShade;
-
+    
     /// An wrapped instance of struct WorldInfo made available automatically as uniform data in our shaders.
     UniformWorldInfoPtr mWorldInfo = nullptr;
 
@@ -187,9 +188,14 @@ void Application::init(){
     initGeometry();
     // Initialize shaders
     initShaders();
+    
+
 
     // Initialize graphics pipeline and render setup 
     VulkanGraphicsApp::init();
+    // Initialize textures
+    initTextures();
+
 }
 
 void Application::run(){
@@ -262,7 +268,8 @@ void Application::updatePerspective(){
 }
 
 void Application::cleanup(){
-    // Let base class handle cleanup.
+    
+    // Let base class handle  cleanup.
     VulkanGraphicsApp::cleanup();
 }
 
@@ -384,6 +391,14 @@ void Application::initShaders(){
     VulkanGraphicsApp::setVertexShader("standard.vert", vertShader);
     VulkanGraphicsApp::setFragmentShader("vertexColor.frag", fragShader);
 }
+
+void Application::initTextures() {
+    VkCommandPool pool = getCommandPool(); //TODO maybe move the next 2 lines into VulkanGraphicsApp
+    textureLoader.setup(pool);
+    textureLoader.createTextureImage("ballTex", STRIFY(ASSET_DIR) "/ballTex.png");
+    
+}
+
 
 /// Initialize uniform data and bind them.
 void Application::initUniforms(){

@@ -8,6 +8,7 @@
 #include "data/UniformBuffer.h"
 #include "data/MultiInstanceUniformBuffer.h"
 #include "load_obj.h"
+#include "load_texture.h"
 #include "utils/common.h"
 #include <map>
 #include <memory>
@@ -38,6 +39,10 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     void setVertexShader(const std::string& aShaderName, const VkShaderModule& aShaderModule);
     void setFragmentShader(const std::string& aShaderName, const VkShaderModule& aShaderModule);
 
+
+
+    const VkCommandPool getCommandPool() const { return mCommandPool; }
+    TextureLoader textureLoader;
  protected:
     friend class VulkanProviderInterface;
     
@@ -104,6 +109,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     VkDescriptorPool mResourceDescriptorPool = VK_NULL_HANDLE;
     VkDescriptorSetLayout mUniformDescriptorSetLayout;
     std::vector<VkDescriptorSet> mUniformDescriptorSets;
+    
 };
 
 #endif

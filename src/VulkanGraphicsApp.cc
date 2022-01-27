@@ -190,6 +190,7 @@ void VulkanGraphicsApp::initCore(){
     mSwapchainProvider->initSwapchain();
 
     mSingleUniformBuffer.updateDevice(getPrimaryDeviceBundle());
+    textureLoader = TextureLoader(getPrimaryDeviceBundle());
 }
 
 void VulkanGraphicsApp::initCommandPool(){
@@ -205,6 +206,7 @@ void VulkanGraphicsApp::initCommandPool(){
             throw std::runtime_error("Failed to create command pool for graphics queue!");
         }
     }
+    assert(mCommandPool != VK_NULL_HANDLE);
 }
 
 void VulkanGraphicsApp::initRenderPipeline(){
@@ -462,7 +464,7 @@ void VulkanGraphicsApp::cleanup(){
     for(std::pair<const std::string, VkShaderModule>& module : mShaderModules){
         vkDestroyShaderModule(getPrimaryDeviceBundle().logicalDevice.handle(), module.second, nullptr);
     }
-
+    textureLoader.cleanup();
     cleanupSwapchainDependents();
 
     mMultiUniformBuffer->freeAndReset();
