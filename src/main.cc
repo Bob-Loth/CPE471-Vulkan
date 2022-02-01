@@ -6,6 +6,7 @@
 #include "data/VertexInput.h"
 #include "utils/BufferedTimer.h"
 #include "load_obj.h"
+#include "load_texture.h"
 
 #include <iostream>
 #include <limits>
@@ -63,14 +64,23 @@ struct AnimShadeData {
 
 };
 
+struct TextureSamplerData {
+    VkSampler sampler = VK_NULL_HANDLE;
+
+    TextureSamplerData(VkSampler sampler) : sampler(sampler) {};
+};
+
 
 // Type definitions wrapping around our structures to make them usable as uniform data
 using UniformWorldInfo     = UniformStructData<WorldInfo>;
 using UniformTransformData = UniformStructData<Transforms>;
 using UniformAnimShadeData = UniformStructData<AnimShadeData>;
+using UniformTextureSamplerData = UniformStructData<TextureSamplerData>;
+
 using UniformWorldInfoPtr     = std::shared_ptr<UniformWorldInfo>;
 using UniformTransformDataPtr = std::shared_ptr<UniformTransformData>;
 using UniformAnimShadeDataPtr = std::shared_ptr<UniformAnimShadeData>;
+using UniformTextureSamplerDataPtr = std::shared_ptr<UniformTextureSamplerData>;
 
 /// Our application class. Pay attention to the member variables defined at the end. 
 class Application : public VulkanGraphicsApp
@@ -365,7 +375,8 @@ void Application::initGeometry(){
         // Collection of uniform data for the object
         {
             {1, mObjectTransforms["vulkan"]}, // Bind transform matrix to binding point #1
-            {2, mObjectAnimShade["vulkan"]} // Bind other uniform data to binding point #2
+            {2, mObjectAnimShade["vulkan"]}, // Bind other uniform data to binding point #2
+            {3, UniformTextureSamplerDataPtr(textureLoader.getSampler())}
         }
     );
 
@@ -410,8 +421,8 @@ void Application::initUniforms(){
     mUniformLayoutSet = UniformDataLayoutSet{
         // {<binding point>, <structure layout>}
         {1, UniformTransformData::sGetLayout()}, // Transform data on binding point #1
-        {2, UniformAnimShadeData::sGetLayout()} // Extra data on binding point #2
-        
+        {2, UniformAnimShadeData::sGetLayout()}, // Blinn-Phong data on binding point #2
+        {3, UniformTextureSamplerData::sGetLayout()}
     };
     VulkanGraphicsApp::initMultiShapeUniformBuffer(mUniformLayoutSet);
 

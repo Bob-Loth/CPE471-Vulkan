@@ -3,7 +3,9 @@
 
 layout(location = 0) in vec3 W_fragNor;
 layout(location = 1) in vec3 W_fragPos;
-layout(location = 2) in vec3 W_lightDir;
+layout(location = 2) in vec2 texCoord;
+layout(location = 3) in vec3 W_lightDir;
+
 
 layout(location = 0) out vec4 fragColor;
 
@@ -20,8 +22,12 @@ layout(binding = 2) uniform AnimShadeData {
     float shininess;
 } uAnimShade;
 
+layout(binding = 3) uniform sampler2D texSampler;
+
 
 void main(){
+    vec4 texColor = texture(texSampler, texCoord);
+
     float brightnessCoefficient = 0.05f;
     vec3 normal = normalize(W_fragNor);
 
@@ -44,5 +50,5 @@ void main(){
     
     vec3 color = diffuseCombined + specularCombined + vec3(uAnimShade.ambientData);
     
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(texColor * vec4(color, 1.0));
 }

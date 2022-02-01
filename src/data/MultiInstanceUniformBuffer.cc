@@ -51,7 +51,7 @@ MultiInstanceUniformBuffer::MultiInstanceUniformBuffer(
 
         mLayoutBindings.emplace_back(VkDescriptorSetLayoutBinding{
             /* binding = */ binding,
-            /* descriptorType = */ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            /* descriptorType = */ (binding == 2) ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             /* descriptorCount = */ 1,
             /* stageFlags = */ aShaderStages,
             /* pImmutableSamplers = */ nullptr

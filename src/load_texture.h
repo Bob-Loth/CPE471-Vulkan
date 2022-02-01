@@ -48,6 +48,7 @@ public:
 	const Texture getTexture(std::string textureName) const { return textures.at(textureName); }
 	void setup(VkCommandPool commandPool);
 	void cleanup();
+	VkSampler getSampler() { return sampler; }
 private:
 	VulkanDeviceBundle deviceBundle; //TODO provide functions to update device bundle, if necessary in the future
 	VkCommandPool commandPool; //TODO provide functions to update command pool, if necessary in the future
