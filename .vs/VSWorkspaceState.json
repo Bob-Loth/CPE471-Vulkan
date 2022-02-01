@@ -1,8 +1,10 @@
 {
   "ExpandedNodes": [
     "",
-    "\\src",
-    "\\src\\data"
+    "\\assets",
+    "\\src\\data",
+    "\\src\\vkutils"
   ],
+  "SelectedNode": "\\.gitignore",
   "PreviewInSolutionExplorer": false
 }

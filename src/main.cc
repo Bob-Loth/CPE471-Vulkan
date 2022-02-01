@@ -396,7 +396,6 @@ void Application::initTextures() {
     VkCommandPool pool = getCommandPool(); //TODO maybe move the next 2 lines into VulkanGraphicsApp
     textureLoader.setup(pool);
     textureLoader.createTextureImage("ballTex", STRIFY(ASSET_DIR) "/ballTex.png");
-    
 }
 
 

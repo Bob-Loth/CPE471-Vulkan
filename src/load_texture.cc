@@ -101,11 +101,19 @@ void TextureLoader::createTextureImage(string textureName, string imagePath){
 
 void TextureLoader::setup(VkCommandPool commandPool){
     this->commandPool = commandPool;
+    createSampler();
 }
 
 void TextureLoader::cleanup(){
+    //free the sampler used for each texture
+    vkDestroySampler(deviceBundle.logicalDevice.handle(), sampler, nullptr);
+    //free texture data
     for (auto texture : textures) {
         auto tex = texture.second;
+        
+        //free the texture image view, must be done before freeing the image itself
+        vkDestroyImageView(tex.device, tex.imageView, nullptr);
+        //free the texture image
         vkDestroyImage(tex.device, tex.image, nullptr);
         vkFreeMemory(tex.device, tex.imageMemory, nullptr);
     }
@@ -135,6 +143,56 @@ void Texture::createImage(VulkanDeviceBundle deviceBundle) {
     }
 
     vkBindImageMemory(deviceBundle.logicalDevice.handle(), image, imageMemory, 0);
+}
+
+//takes a created image (from createImage) and creates an image view from it
+void Texture::createImageView(){
+    VkImageViewCreateInfo imageViewInfo{};
+    imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imageViewInfo.image = image;
+    imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imageViewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageViewInfo.subresourceRange.baseMipLevel = 0;
+    imageViewInfo.subresourceRange.levelCount = 1;
+    imageViewInfo.subresourceRange.baseArrayLayer = 0;
+    imageViewInfo.subresourceRange.layerCount = 1;
+
+    if (VK_SUCCESS != vkCreateImageView(device, &imageViewInfo, nullptr, &imageView)) {
+        cerr << "failed to create texture image view" << endl;
+        exit(1);
+    }
+}
+
+void TextureLoader::createSampler(){
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_NEAREST; //No filtering. Other option is VK_FILTER_LINEAR for bilinear filtering
+    samplerInfo.minFilter = VK_FILTER_NEAREST; //No filtering, Other option is VK_FILTER_LINEAR for anisotropic filtering
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+    //you can query the physical device to check the max available anisotropy, but not enabling it for now.
+    samplerInfo.anisotropyEnable = VK_FALSE;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    //set to true if you wish to address coordinates from [0,texWidth) and [0, texHeight). False indicates [0,1) on both axes, which is more common.
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+    //Used for shadow-mapping
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
+    //mip-mapping
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+    
+    if (VK_SUCCESS != vkCreateSampler(deviceBundle.logicalDevice.handle(), &samplerInfo, nullptr, &sampler)) {
+        cerr << "failed to create texture sampler" << endl;
+        exit(1);
+    }
 }
 
 VkCommandBuffer TextureLoader::beginSingleTimeCommands(){

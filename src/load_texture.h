@@ -24,11 +24,14 @@ public:
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
 	VkImage image;
+	VkImageView imageView;
 	VkDeviceMemory imageMemory;
-	Texture() : device(VK_NULL_HANDLE), stagingBuffer(VK_NULL_HANDLE), stagingBufferMemory(VK_NULL_HANDLE), image(VK_NULL_HANDLE), imageMemory(VK_NULL_HANDLE) {};
-	Texture(VkDevice device) : device(device), stagingBuffer(VK_NULL_HANDLE), stagingBufferMemory(VK_NULL_HANDLE), image(VK_NULL_HANDLE), imageMemory(VK_NULL_HANDLE){};
+	Texture() : device(VK_NULL_HANDLE), stagingBuffer(VK_NULL_HANDLE), stagingBufferMemory(VK_NULL_HANDLE), image(VK_NULL_HANDLE), imageMemory(VK_NULL_HANDLE), imageView(VK_NULL_HANDLE) {};
+	Texture(VkDevice device) : device(device), stagingBuffer(VK_NULL_HANDLE), stagingBufferMemory(VK_NULL_HANDLE), image(VK_NULL_HANDLE), imageMemory(VK_NULL_HANDLE), imageView(VK_NULL_HANDLE) {};
 	~Texture();
 	void createImage(VulkanDeviceBundle deviceBundle);
+	void createImageView();
+	
 	VkImageCreateInfo initVkImageCreateInfo();
 };
 
@@ -48,6 +51,8 @@ public:
 private:
 	VulkanDeviceBundle deviceBundle; //TODO provide functions to update device bundle, if necessary in the future
 	VkCommandPool commandPool; //TODO provide functions to update command pool, if necessary in the future
+	//this sampler will be used for all texture images/imageviews. Adding custom samplers for different textures could be done by giving each texture a unique sampler, or making this a vector of samplers.
+	VkSampler sampler;
 	//texture data, held in a map and accessed by a user-provided string mnemonic
 	std::unordered_map<std::string, Texture> textures;
 	//private helper functions
@@ -57,6 +62,7 @@ private:
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	//consider learning about and using vkutils::QueueClosure();
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+	void createSampler();
 };
 
 
