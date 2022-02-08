@@ -46,14 +46,18 @@ public:
 	//given a textureName mnemonic, and a path to an image file, constructs a VkImage, allocates device memory and staging buffer memory.
 	void createTextureImage(std::string textureName, std::string imagePath);
 	const Texture getTexture(std::string textureName) const { return textures.at(textureName); }
+	const void setDebugTexture() { activeTexture = textures.at("debug"); }
+	const Texture getTexture();
 	void setup(VkCommandPool commandPool);
 	void cleanup();
-	VkSampler getSampler() { return sampler; }
+	VkSampler getSampler() { return activeSampler; }
 private:
 	VulkanDeviceBundle deviceBundle; //TODO provide functions to update device bundle, if necessary in the future
 	VkCommandPool commandPool; //TODO provide functions to update command pool, if necessary in the future
 	//this sampler will be used for all texture images/imageviews. Adding custom samplers for different textures could be done by giving each texture a unique sampler, or making this a vector of samplers.
-	VkSampler sampler;
+	VkSampler activeSampler;
+	Texture activeTexture = Texture(deviceBundle.logicalDevice.handle());
+
 	//texture data, held in a map and accessed by a user-provided string mnemonic
 	std::unordered_map<std::string, Texture> textures;
 	//private helper functions

@@ -7,6 +7,7 @@
 #include "data/VertexGeometry.h"
 #include "data/UniformBuffer.h"
 #include "data/MultiInstanceUniformBuffer.h"
+#include "data/MultiInstanceCombinedImageSampler.h"
 #include "load_obj.h"
 #include "load_texture.h"
 #include "utils/common.h"
@@ -29,8 +30,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
 
     /// Setup the uniform buffer that will be used by all MultiShape objects in the scene
     /// 'aUniformLayout' specifies the layout of uniform data available to all instances.
-    void initMultiShapeUniformBuffer(const UniformDataLayoutSet& aUniformLayout);
-
+    void initMultis(const UniformDataLayoutSet& aUniformLayout);
     /// Add loaded obj and a set of interfaces for its uniform data
     void addMultiShapeObject(const ObjMultiShapeGeometry& mObject, const UniformDataInterfaceSet& aUniformData);
 
@@ -60,7 +60,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     void initCore(); 
 
     void initCommandPool(); 
-    
+    void initTextures();
     void initRenderPipeline();
     void initFramebuffers();
     void initCommands();
@@ -102,7 +102,9 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
 
     std::vector<ObjMultiShapeGeometry> mMultiShapeObjects;
 
+    std::shared_ptr<MultiInstanceCombinedImageSampler> mCombinedImageSampler = nullptr;
     std::shared_ptr<MultiInstanceUniformBuffer> mMultiUniformBuffer = nullptr;
+    
     UniformBuffer mSingleUniformBuffer; 
 
     VkDeviceSize mTotalUniformDescriptorSetCount = 0;

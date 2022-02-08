@@ -4,7 +4,7 @@
 #include "utils/common.h"
 #include "vkutils/VulkanDevices.h"
 #include <vulkan/vulkan.h>
-
+#include <string>
 
 enum DeviceSyncStateEnum{
     DEVICE_EMPTY,
@@ -12,6 +12,29 @@ enum DeviceSyncStateEnum{
     DEVICE_IN_SYNC,
     CPU_DATA_FLUSHED
 };
+
+
+class UniformDataLayoutMismatchException : public std::exception
+{
+public:
+    UniformDataLayoutMismatchException(int64_t aExpectedBinding, int64_t aFoundBinding);
+    UniformDataLayoutMismatchException(uint32_t aBinding, size_t aExpectedSize, size_t aActualSize);
+
+    virtual const char* what() const noexcept override { return(_whatStr.c_str()); }
+private:
+    const std::string _whatStr;
+};
+
+class InstanceBoundError : public std::exception
+{
+public:
+    InstanceBoundError(uint32_t aRequested, uint32_t aBound) : _whatStr("Requested instance index " + std::to_string(aRequested) + " is out of bounds ( >= " + std::to_string(aBound)) {}
+
+    virtual const char* what() const noexcept override { return(_whatStr.c_str()); }
+private:
+    const std::string _whatStr;
+};
+
 
 class SyncedBufferInterface
 {

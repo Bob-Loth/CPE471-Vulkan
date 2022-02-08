@@ -20,11 +20,19 @@ void VulkanGraphicsApp::init(){
     initCommandPool();
     initTransferCmdBuffer();
     transferGeometry();
+    initTextures();
     initUniformResources();
     initRenderPipeline();
     initFramebuffers();
     initCommands();
     initSync();
+}
+
+void VulkanGraphicsApp::initTextures() {
+    textureLoader.setup(mCommandPool);
+    textureLoader.createTextureImage("debug", STRIFY(ASSET_DIR) "/1x1.png");
+    textureLoader.setDebugTexture();
+    textureLoader.createTextureImage("ballTex", STRIFY(ASSET_DIR) "/ballTex.png");
 }
 
 const VkExtent2D& VulkanGraphicsApp::getFramebufferSize() const{
@@ -53,14 +61,21 @@ void VulkanGraphicsApp::setFragmentShader(const std::string& aShaderName, const 
     }
 }
 
-void VulkanGraphicsApp::initMultiShapeUniformBuffer(const UniformDataLayoutSet& aUniformLayout){
+void VulkanGraphicsApp::initMultis(const UniformDataLayoutSet& aUniformLayout){
     mMultiUniformBuffer = std::make_shared<MultiInstanceUniformBuffer>(
         getPrimaryDeviceBundle(),
         aUniformLayout,
         0, // Instances to start with
         16 // Capacity to start with
     );
+    mCombinedImageSampler = std::make_shared<MultiInstanceCombinedImageSampler>(
+        getPrimaryDeviceBundle(),
+        aUniformLayout,
+        0,
+        16
+    );
 }
+
 
 void VulkanGraphicsApp::addMultiShapeObject(const ObjMultiShapeGeometry& mObject, const UniformDataInterfaceSet& aUniformData){
     mMultiShapeObjects.emplace_back(mObject);
@@ -518,9 +533,10 @@ void VulkanGraphicsApp::initUniformResources() {
 void VulkanGraphicsApp::initUniformDescriptorPool() {
     uint32_t dynamicPoolSize = mTotalUniformDescriptorSetCount*mMultiUniformBuffer->boundLayoutCount();
     uint32_t staticPoolSize = mTotalUniformDescriptorSetCount*mSingleUniformBuffer.boundInterfaceCount();
-    VkDescriptorPoolSize poolSizes[2] = {
+    VkDescriptorPoolSize poolSizes[3] = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, dynamicPoolSize},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, staticPoolSize}
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, staticPoolSize},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, dynamicPoolSize}
     };
 
     VkDescriptorPoolCreateInfo createInfo;
@@ -529,7 +545,7 @@ void VulkanGraphicsApp::initUniformDescriptorPool() {
         createInfo.pNext = nullptr;
         createInfo.flags = 0;
         createInfo.maxSets = static_cast<uint32_t>(mTotalUniformDescriptorSetCount);
-        createInfo.poolSizeCount = 2;
+        createInfo.poolSizeCount = 3;
         createInfo.pPoolSizes = poolSizes;
     }
 
@@ -561,25 +577,42 @@ void VulkanGraphicsApp::allocateDescriptorSets() {
 
 void VulkanGraphicsApp::writeDescriptorSets(){
     std::map<uint32_t, VkDescriptorBufferInfo> bufferInfos = merge(mSingleUniformBuffer.getDescriptorBufferInfos(), mMultiUniformBuffer->getDescriptorBufferInfos());
-
+    std::map<uint32_t, VkDescriptorImageInfo> imageInfos = mMultiUniformBuffer->getDescriptorImageInfos(textureLoader);
     std::vector<VkWriteDescriptorSet> setWriters;
     setWriters.reserve(mUniformDescriptorSets.size() * bufferInfos.size());
 
     VkBuffer staticUB = mSingleUniformBuffer.handle();
-
+    VkBuffer dynamicUB = mMultiUniformBuffer->handle();
+    
     for(VkDescriptorSet descriptorSet : mUniformDescriptorSets){
         for(const auto& info : bufferInfos){
             setWriters.emplace_back(
                 VkWriteDescriptorSet{
                     /* sType = */ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    /* pNext = */ nullptr, 
+                    /* pNext = */ nullptr,
                     /* dstSet = */ descriptorSet,
                     /* dstBinding = */ info.first,
                     /* dstArrayElement = */ 0,
                     /* descriptorCount = */ 1,
-                    /* descriptorType = */ info.second.buffer == staticUB ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+                    /* descriptorType = */ (info.second.buffer == staticUB) ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
                     /* pImageInfo = */ nullptr,
                     /* pBufferInfo = */ &info.second,
+                    /* pTexelBufferView = */ nullptr
+                }
+            );
+        }
+        for(const auto& info : imageInfos){
+            setWriters.emplace_back(
+                VkWriteDescriptorSet{
+                    /* sType = */ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    /* pNext = */ nullptr,
+                    /* dstSet = */ descriptorSet,
+                    /* dstBinding = */ info.first,
+                    /* dstArrayElement = */ 0,
+                    /* descriptorCount = */ 1,
+                    /* descriptorType = */ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    /* pImageInfo = */ &info.second,
+                    /* pBufferInfo = */ nullptr,
                     /* pTexelBufferView = */ nullptr
                 }
             );

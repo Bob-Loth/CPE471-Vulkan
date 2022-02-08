@@ -65,9 +65,9 @@ struct AnimShadeData {
 };
 
 struct TextureSamplerData {
-    VkSampler sampler = VK_NULL_HANDLE;
-
-    TextureSamplerData(VkSampler sampler) : sampler(sampler) {};
+    //VkSampler sampler = VK_NULL_HANDLE;
+    int test = 0;
+    //TextureSamplerData(VkSampler sampler) : sampler(sampler) {};
 };
 
 
@@ -113,6 +113,8 @@ class Application : public VulkanGraphicsApp
     /// Collection of extra per-object data. Contains an entry for each object in mObjects.
     std::unordered_map<std::string, UniformAnimShadeDataPtr> mObjectAnimShade;
     
+    std::unordered_map<std::string, UniformTextureSamplerDataPtr> mObjectTextureSamplers;
+
     /// An wrapped instance of struct WorldInfo made available automatically as uniform data in our shaders.
     UniformWorldInfoPtr mWorldInfo = nullptr;
 
@@ -200,11 +202,10 @@ void Application::init(){
     initShaders();
     
 
-
+    
     // Initialize graphics pipeline and render setup 
     VulkanGraphicsApp::init();
-    // Initialize textures
-    initTextures();
+    
 
 }
 
@@ -358,6 +359,12 @@ void Application::initGeometry(){
     mObjectAnimShade["bunny"] = UniformAnimShadeData::create();
     mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
     mObjectAnimShade["ballTex"] = UniformAnimShadeData::create();
+
+    mObjectTextureSamplers["vulkan"] = UniformTextureSamplerData::create();
+    mObjectTextureSamplers["monkey"] = UniformTextureSamplerData::create();
+    mObjectTextureSamplers["bunny"] = UniformTextureSamplerData::create();
+    mObjectTextureSamplers["teapot"] = UniformTextureSamplerData::create();
+    mObjectTextureSamplers["ballTex"] = UniformTextureSamplerData::create();
     
     //Make a color map
     auto BlPhColors = unordered_map<string, AnimShadeData>();
@@ -376,15 +383,15 @@ void Application::initGeometry(){
         {
             {1, mObjectTransforms["vulkan"]}, // Bind transform matrix to binding point #1
             {2, mObjectAnimShade["vulkan"]}, // Bind other uniform data to binding point #2
-            {3, UniformTextureSamplerDataPtr(textureLoader.getSampler())}
+            {3, mObjectTextureSamplers["ballTex"]}
         }
     );
 
     // Add the other objects the same way as above. 
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["monkey"], {{1, mObjectTransforms["monkey"]}, {2, mObjectAnimShade["monkey"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["bunny"], {{1, mObjectTransforms["bunny"]}, {2, mObjectAnimShade["bunny"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]} });
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["monkey"], {{1, mObjectTransforms["monkey"]}, {2, mObjectAnimShade["monkey"]}, {3, mObjectTextureSamplers["ballTex"]} });
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["bunny"], {{1, mObjectTransforms["bunny"]}, {2, mObjectAnimShade["bunny"]}, {3, mObjectTextureSamplers["ballTex"]} });
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}, {3, mObjectTextureSamplers["ballTex"]} });
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]}, {3, mObjectTextureSamplers["ballTex"]} });
 }
 
 /// Initialize our shaders
@@ -403,11 +410,7 @@ void Application::initShaders(){
     VulkanGraphicsApp::setFragmentShader("vertexColor.frag", fragShader);
 }
 
-void Application::initTextures() {
-    VkCommandPool pool = getCommandPool(); //TODO maybe move the next 2 lines into VulkanGraphicsApp
-    textureLoader.setup(pool);
-    textureLoader.createTextureImage("ballTex", STRIFY(ASSET_DIR) "/ballTex.png");
-}
+
 
 
 /// Initialize uniform data and bind them.
@@ -424,8 +427,9 @@ void Application::initUniforms(){
         {2, UniformAnimShadeData::sGetLayout()}, // Blinn-Phong data on binding point #2
         {3, UniformTextureSamplerData::sGetLayout()}
     };
-    VulkanGraphicsApp::initMultiShapeUniformBuffer(mUniformLayoutSet);
-
+    
+    VulkanGraphicsApp::initMultis(mUniformLayoutSet);
+    
     updateView();
     updatePerspective();
 }

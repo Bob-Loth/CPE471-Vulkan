@@ -38,13 +38,13 @@ class UniformDataInterface : public virtual UniformDataLayout
 
     virtual const uint8_t* getData() const = 0;
     virtual bool isDataDirty() const = 0;
-
+    virtual void flagAsClean() const = 0;
+    virtual void flagAsDirty() const = 0;
  protected:
     friend class UniformBuffer;
     friend class MultiInstanceUniformBuffer;
-
-    virtual void flagAsClean() const = 0;
-    virtual void flagAsDirty() const = 0;
+    friend class MultiInstanceCombinedImageSampler;
+    
 };
 
 using UniformDataInterfacePtr = std::shared_ptr<UniformDataInterface>;
@@ -106,7 +106,7 @@ class UniformStructData : virtual public UniformDataInterface, virtual public Un
 
     /// Create a new UniformStructData object with uninitalized data> 
     static ptr_t create() {return(ptr_t(new UniformStructData<uniform_struct_t>()));}
-    
+    static ptr_t create(UniformStructData<uniform_struct_t> data) { return(ptr_t(new UniformStructData<uniform_struct_t>(data))); }
     static typename UniformStructDataLayout<UniformStruct, T_alignment_size>::ptr_t sGetLayout(){
         return(UniformStructDataLayout<UniformStruct, T_alignment_size>::create());
     }

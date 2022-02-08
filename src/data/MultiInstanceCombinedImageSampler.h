@@ -1,8 +1,7 @@
-#ifndef MULTI_INSTANCE_UNIFORM_BUFFER_H_
-#define MULTI_INSTANCE_UNIFORM_BUFFER_H_
+#ifndef MULTI_INSTANCE_COMBINED_IMAGE_SAMPLER_H_
+#define MULTI_INSTANCE_COMBINED_IMAGE_SAMPLER_H_
 #include "UniformBuffer.h"
 #include "vk_mem_alloc.h"
-#include "load_texture.h"
 #include <exception>
 #include <string>
 
@@ -15,13 +14,13 @@
 /** A uniform buffer encapsulation class designed for use with dynamic offsets
  *  when drawing multiple times with the same uniform descriptor layout and differing data
  */
-class MultiInstanceUniformBuffer : public DirectlySyncedBufferInterface
+class MultiInstanceCombinedImageSampler : public DirectlySyncedBufferInterface
 {
- public:
+public:
     /// (uint32_t) Index for an instance of uniform data within multi-instance uniform buffer
     using instance_index_t = uint32_t;
 
-    explicit MultiInstanceUniformBuffer(
+    explicit MultiInstanceCombinedImageSampler(
         const VulkanDeviceBundle& aDeviceBundle, // Device to create uniform buffer on
         const UniformDataLayoutSet& aUniformDataLayouts, // Set of uniform data layouts describing the uniform buffer data
         instance_index_t aInstanceCount, // Initial number of instances for which to allocate space.
@@ -29,10 +28,10 @@ class MultiInstanceUniformBuffer : public DirectlySyncedBufferInterface
         VkShaderStageFlags aShaderStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT // Optional: Shader stage flags to enable for this uniform buffer. Defaults to vertex and fragment. 
     );
 
-    virtual ~MultiInstanceUniformBuffer() = default;
+    virtual ~MultiInstanceCombinedImageSampler() = default;
 
     /// Returns number of instances contained in the buffer
-    instance_index_t getInstanceCount() const {return(mInstanceCount);}
+    instance_index_t getInstanceCount() const { return(mInstanceCount); }
     /// Sets the number of instances contained in the buffer
     void setInstanceCount(instance_index_t aCount);
     /// Push back a new instance
@@ -62,34 +61,34 @@ class MultiInstanceUniformBuffer : public DirectlySyncedBufferInterface
     void freeInstanceDataInterfaces(instance_index_t aInstanceIndex);
 
     /// Returns current instance capcity of the buffer. Will always be >= instance count
-    instance_index_t getCapcity() const {return(mCapacity);}
+    instance_index_t getCapcity() const { return(mCapacity); }
     /// Set the instance capacity of the buffer. 'aCapacity' must be >= instance count.
     void setCapcity(instance_index_t aCapacity);
     /// Set capcity to exactly match number of instances. Best to call when no instances will be added or removed. 
     void resizeToFit();
 
     /// Returns number of UniformDataLayout objects attached for this buffer. 
-    size_t boundLayoutCount() const {return(mBoundLayouts.size());}
+    size_t boundLayoutCount() const { return(mBoundLayouts.size()); }
 
     /// Returns the total size of an instance (excluding padding)
-    size_t getInstanceDataSize() const {return(mBoundLayouts.getTotalPaddedSize(1));}
+    size_t getInstanceDataSize() const { return(mBoundLayouts.getTotalPaddedSize(1)); }
 
-    size_t getPaddedInstanceDataSize() const {return(mBoundLayouts.getTotalPaddedSize(mBufferAlignmentSize));}
+    size_t getPaddedInstanceDataSize() const { return(mBoundLayouts.getTotalPaddedSize(mBufferAlignmentSize)); }
 
-    const size_t dynamicOffsetCount() const {return(mBoundLayouts.size()-1);}
-    const uint32_t* getDynamicOffsets(instance_index_t aInstance) const {return(mBlockOffsets[aInstance].data());}
+    const size_t dynamicOffsetCount() const { return(mBoundLayouts.size()); }
+    const uint32_t* getDynamicOffsets(instance_index_t aInstance) const { return(mBlockOffsets[aInstance].data()); }
 
     /// Returns true if any bound uniform data is dirtied.
     bool isBoundDataDirty() const;
     /// Check if any of the bound uniform data has been dirtied and set deviceSyncState accordingly 
     void pollBoundData() const;
 
-    DeviceSyncStateEnum getDeviceSyncState() const override {pollBoundData(); return(mDeviceSyncState);}
+    DeviceSyncStateEnum getDeviceSyncState() const override { pollBoundData(); return(mDeviceSyncState); }
 
     /// Update the device with the uniform buffer contents only if the data is out of sync with the device
     virtual void updateDevice() override;
 
-    virtual VulkanDeviceHandlePair getCurrentDevice() const override {return(mCurrentDevice);}
+    virtual VulkanDeviceHandlePair getCurrentDevice() const override { return(mCurrentDevice); }
 
     /// Get the offset of a particular binding point RELATIVE to the start of the instance block.
     size_t getBoundDataOffset(uint32_t aBindPoint) const;
@@ -100,24 +99,24 @@ class MultiInstanceUniformBuffer : public DirectlySyncedBufferInterface
     /// Get the map of descriptor set layout bindings. Each instance block shares this list. 
     const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings() const;
 
-    /** Returns handle for a descriptor set layout object matching the uniform buffer. 
+    /** Returns handle for a descriptor set layout object matching the uniform buffer.
       * This object is invalidated or deleted under the following circumstances:
       *   - freeAndReset() is called on UniformBuffer instance
       */
-    VkDescriptorSetLayout getDescriptorSetLayout() const {return(mDescriptorSetLayout);}
+    VkDescriptorSetLayout getDescriptorSetLayout() const { return(mDescriptorSetLayout); }
 
     /// Get list of binding info for the bound layouts
     std::map<uint32_t, VkDescriptorBufferInfo> getDescriptorBufferInfos() const;
-    std::map<uint32_t, VkDescriptorImageInfo> getDescriptorImageInfos(TextureLoader& textureLoader) const;
-    virtual const VkBuffer& getBuffer() const override {return(mUniformBuffer);}
-    virtual size_t getBufferSize() const override {return(mAllocInfo.size);}
 
-    virtual void freeAndReset() override {_cleanup();}
+    virtual const VkBuffer& getBuffer() const override { return(mUniformBuffer); }
+    virtual size_t getBufferSize() const override { return(mAllocInfo.size); }
+
+    virtual void freeAndReset() override { _cleanup(); }
 
 #ifdef UNIFORM_BUFFER_UNIT_TESTING
- public:
+public:
 #else
- protected:
+protected:
 #endif 
 
     void createDescriptorSetLayout();
@@ -139,7 +138,7 @@ class MultiInstanceUniformBuffer : public DirectlySyncedBufferInterface
     void assertInstanceInbounds(instance_index_t aIndex) const;
     void assertLayoutMatches(const UniformDataInterfaceSet& aInterfaceSet) const;
 
-    VulkanDeviceHandlePair mCurrentDevice = {VK_NULL_HANDLE, VK_NULL_HANDLE};
+    VulkanDeviceHandlePair mCurrentDevice = { VK_NULL_HANDLE, VK_NULL_HANDLE };
     instance_index_t mInstanceCount;
     instance_index_t mCapacity;
 
@@ -157,15 +156,15 @@ class MultiInstanceUniformBuffer : public DirectlySyncedBufferInterface
 
     mutable DeviceSyncStateEnum mDeviceSyncState = DEVICE_EMPTY;
 
-    const VkDeviceSize mBufferAlignmentSize = 16U; 
+    const VkDeviceSize mBufferAlignmentSize = 16U;
     const size_t mPaddedBlockSize;
 
     VkBuffer mUniformBuffer = VK_NULL_HANDLE;
     VmaAllocation mBufferAllocation = VK_NULL_HANDLE;
     VmaAllocationInfo mAllocInfo;
-    
- private:
-    void _cleanup(); 
+
+private:
+    void _cleanup();
 };
 
 #endif

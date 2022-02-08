@@ -61,7 +61,9 @@ void TextureLoader::createBuffer(VkDeviceSize size, VkBufferUsageFlags bufferUsa
     vkBindBufferMemory(deviceBundle.logicalDevice.handle(), buffer, bufferMemory, 0);
 }
 
-
+const Texture TextureLoader::getTexture() {
+    return activeTexture; 
+}
 
 void TextureLoader::createTextureImage(string textureName, string imagePath){
     textures[textureName] = Texture(deviceBundle.logicalDevice.handle());
@@ -97,6 +99,8 @@ void TextureLoader::createTextureImage(string textureName, string imagePath){
 
     vkDestroyBuffer(deviceBundle.logicalDevice.handle(), textures[textureName].stagingBuffer, nullptr);
     vkFreeMemory(deviceBundle.logicalDevice.handle(), textures[textureName].stagingBufferMemory, nullptr);
+
+    textures[textureName].createImageView();
 }
 
 void TextureLoader::setup(VkCommandPool commandPool){
@@ -106,7 +110,7 @@ void TextureLoader::setup(VkCommandPool commandPool){
 
 void TextureLoader::cleanup(){
     //free the sampler used for each texture
-    vkDestroySampler(deviceBundle.logicalDevice.handle(), sampler, nullptr);
+    vkDestroySampler(deviceBundle.logicalDevice.handle(), activeSampler, nullptr);
     //free texture data
     for (auto texture : textures) {
         auto tex = texture.second;
@@ -189,7 +193,7 @@ void TextureLoader::createSampler(){
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
     
-    if (VK_SUCCESS != vkCreateSampler(deviceBundle.logicalDevice.handle(), &samplerInfo, nullptr, &sampler)) {
+    if (VK_SUCCESS != vkCreateSampler(deviceBundle.logicalDevice.handle(), &samplerInfo, nullptr, &activeSampler)) {
         cerr << "failed to create texture sampler" << endl;
         exit(1);
     }

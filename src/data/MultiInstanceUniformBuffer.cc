@@ -1,8 +1,10 @@
 #include "MultiInstanceUniformBuffer.h"
 #include "vkutils/VmaHost.h"
+#include "utils/utils.h"
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <iostream>
 
 using instance_index_t = MultiInstanceUniformBuffer::instance_index_t;
 
@@ -49,9 +51,10 @@ MultiInstanceUniformBuffer::MultiInstanceUniformBuffer(
         uint32_t binding = entry.first;
         const UniformDataLayoutPtr layout = entry.second;
 
+        
         mLayoutBindings.emplace_back(VkDescriptorSetLayoutBinding{
             /* binding = */ binding,
-            /* descriptorType = */ (binding == 2) ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            /* descriptorType = */ (isCIS(layout)) ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             /* descriptorCount = */ 1,
             /* stageFlags = */ aShaderStages,
             /* pImmutableSamplers = */ nullptr
@@ -185,13 +188,35 @@ const std::vector<VkDescriptorSetLayoutBinding>& MultiInstanceUniformBuffer::get
 std::map<uint32_t, VkDescriptorBufferInfo> MultiInstanceUniformBuffer::getDescriptorBufferInfos() const{
     std::map<uint32_t, VkDescriptorBufferInfo> infos;
     for(const std::pair<uint32_t, UniformDataLayoutPtr>& setEntry : mBoundLayouts){
-        infos.emplace(setEntry.first, 
-        VkDescriptorBufferInfo{
-            mUniformBuffer,
-            mBoundLayouts.getBoundDataOffset(setEntry.first, mBufferAlignmentSize),
-            setEntry.second->getDataSize()
-        });
+        if (!isCIS(setEntry.second)) {
+            infos.emplace(
+                setEntry.first,
+                VkDescriptorBufferInfo{
+                    mUniformBuffer,
+                    mBoundLayouts.getBoundDataOffset(setEntry.first, mBufferAlignmentSize),
+                    setEntry.second->getDataSize()
+                });
+        }
     }
+    return(infos);
+}
+
+std::map<uint32_t, VkDescriptorImageInfo> MultiInstanceUniformBuffer::getDescriptorImageInfos(TextureLoader& textureLoader) const{
+    std::map<uint32_t, VkDescriptorImageInfo> infos;
+    for (const std::pair<uint32_t, UniformDataLayoutPtr>& setEntry : mBoundLayouts) {
+        if (isCIS(setEntry.second)) {
+            std::cout << typeid(*setEntry.second).name() << std::endl;
+            infos.emplace(
+                setEntry.first,
+                VkDescriptorImageInfo{
+                    /*sampler = */textureLoader.getSampler(),
+                    /*imageView =*/textureLoader.getTexture().imageView, //TODO change to active texture
+                    /*imageLayout =*/VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                }
+            );
+        }
+    }
+    std::cout << "here!";
     return(infos);
 }
 
@@ -222,7 +247,7 @@ void MultiInstanceUniformBuffer::createBuffer(size_t aNewSize){
         bufferInfo.pNext = nullptr;
         bufferInfo.flags = 0;
         bufferInfo.size = aNewSize;
-        bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         bufferInfo.queueFamilyIndexCount = 0U;
         bufferInfo.pQueueFamilyIndices = nullptr;
@@ -310,9 +335,11 @@ void MultiInstanceUniformBuffer::assertLayoutMatches(const UniformDataInterfaceS
     for(const auto& layoutEntry : mBoundLayouts){
     const auto& finder = aDataInterfaces.find(layoutEntry.first);
     if(finder == aDataInterfaces.end()){
+        std::cout << layoutEntry.first << std::endl;
         throw UniformDataLayoutMismatchException(layoutEntry.first, -1);
     }
     if(finder->second->getDataSize() != layoutEntry.second->getDataSize()){
+        std::cout << layoutEntry.first << " : " << finder->second->getDataSize() << " : " << layoutEntry.second->getDataSize() << std::endl;
         throw UniformDataLayoutMismatchException(layoutEntry.first, finder->second->getDataSize(), layoutEntry.second->getDataSize());
     }
     if(aDataInterfaces.size() != mBoundLayouts.size()){
