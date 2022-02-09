@@ -49,6 +49,7 @@ void main(){
     }
     
     vec3 color = diffuseCombined + specularCombined + vec3(uAnimShade.ambientData);
-    
-    fragColor = vec4(texColor * vec4(color, 1.0));
+    //fragColor = vec4(texCoord, 0.0, 1.0);
+    fragColor = texColor;
+    //fragColor = vec4(vec4(color, 1.0));
 }

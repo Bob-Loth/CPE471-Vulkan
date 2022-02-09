@@ -31,8 +31,9 @@ void VulkanGraphicsApp::init(){
 void VulkanGraphicsApp::initTextures() {
     textureLoader.setup(mCommandPool);
     textureLoader.createTextureImage("debug", STRIFY(ASSET_DIR) "/1x1.png");
-    textureLoader.setDebugTexture();
     textureLoader.createTextureImage("ballTex", STRIFY(ASSET_DIR) "/ballTex.png");
+    textureLoader.setDebugTexture();
+    
 }
 
 const VkExtent2D& VulkanGraphicsApp::getFramebufferSize() const{

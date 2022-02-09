@@ -1,10 +1,7 @@
 {
   "ExpandedNodes": [
-    "",
-    "\\assets",
-    "\\src\\data",
-    "\\src\\vkutils"
+    ""
   ],
-  "SelectedNode": "\\.gitignore",
+  "SelectedNode": "\\CMake Targets View",
   "PreviewInSolutionExplorer": false
 }

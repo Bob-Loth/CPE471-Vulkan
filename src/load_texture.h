@@ -46,7 +46,7 @@ public:
 	//given a textureName mnemonic, and a path to an image file, constructs a VkImage, allocates device memory and staging buffer memory.
 	void createTextureImage(std::string textureName, std::string imagePath);
 	const Texture getTexture(std::string textureName) const { return textures.at(textureName); }
-	const void setDebugTexture() { activeTexture = textures.at("debug"); }
+	const void setDebugTexture() { activeTexture = textures.at("ballTex"); }
 	const Texture getTexture();
 	void setup(VkCommandPool commandPool);
 	void cleanup();

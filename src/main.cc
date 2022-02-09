@@ -66,7 +66,7 @@ struct AnimShadeData {
 
 struct TextureSamplerData {
     //VkSampler sampler = VK_NULL_HANDLE;
-    int test = 0;
+    int test = 2;
     //TextureSamplerData(VkSampler sampler) : sampler(sampler) {};
 };
 
@@ -100,7 +100,6 @@ class Application : public VulkanGraphicsApp
     void initGeometry();
     void initShaders();
     void initUniforms();
-    void initTextures();
     void render(double dt);
 
     /// Collection describing the overall layout of all uniform data being used. 
