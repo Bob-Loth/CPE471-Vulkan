@@ -36,7 +36,6 @@ std::vector<std::string> VulkanSetupCore::gatherInstanceExtensions(){
         requested.emplace("VK_KHR_get_physical_device_properties2");
     #endif
     
-    
     for(const VulkanProviderInterface* dependent : _mDependentProviders){
         const std::vector<std::string>& dRequested = dependent->getRequestedInstanceExtensions();
         const std::vector<std::string>& dRequired = dependent->getRequiredInstanceExtensions();
