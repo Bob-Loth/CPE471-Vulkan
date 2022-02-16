@@ -20,6 +20,9 @@
 #include <glm/gtx/string_cast.hpp>
 
 using namespace std;
+enum ShadingLayer { BLINN_PHONG, NORMAL_MAP, TEXTURE_MAP, TEXTURED_FLAT, TEXTURED_SHADED, NO_FORCED_LAYER };
+ShadingLayer currentShadingLayer = NO_FORCED_LAYER; /*static initialization problem generates linker error, using global for now*/
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // The code below defines the types and formatting for uniform data used in our shaders. 
@@ -52,22 +55,18 @@ struct AnimShadeData {
     glm::vec4 ambientData = glm::vec4(0.05f, 0.05f, 0.05f, 1.0f);
     glm::vec4 specularData = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
     float shininess = 300.0f;
-
+    uint32_t shadingLayer = 0;
     //default steely material
-    AnimShadeData() {}; 
+    AnimShadeData() {};
+    //textures only
+    AnimShadeData(uint32_t mode) : shadingLayer(mode) {}
     //Use to edit diffuse and shininess only
-    AnimShadeData(glm::vec4 dif, float shn) :
-        diffuseData(dif), shininess(shn) {}
+    AnimShadeData(glm::vec4 dif, float shn, uint32_t mode) :
+        diffuseData(dif), shininess(shn), shadingLayer(mode) {}
     //Use to fully control material properties
-    AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn) :
-        diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn) {}
+    AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn, uint32_t mode) :
+        diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn), shadingLayer(mode) {}
 
-};
-
-struct TextureSamplerData {
-    //VkSampler sampler = VK_NULL_HANDLE;
-    int test = 2;
-    //TextureSamplerData(VkSampler sampler) : sampler(sampler) {};
 };
 
 
@@ -75,12 +74,10 @@ struct TextureSamplerData {
 using UniformWorldInfo     = UniformStructData<WorldInfo>;
 using UniformTransformData = UniformStructData<Transforms>;
 using UniformAnimShadeData = UniformStructData<AnimShadeData>;
-using UniformTextureSamplerData = UniformStructData<TextureSamplerData>;
 
 using UniformWorldInfoPtr     = std::shared_ptr<UniformWorldInfo>;
 using UniformTransformDataPtr = std::shared_ptr<UniformTransformData>;
 using UniformAnimShadeDataPtr = std::shared_ptr<UniformAnimShadeData>;
-using UniformTextureSamplerDataPtr = std::shared_ptr<UniformTextureSamplerData>;
 
 /// Our application class. Pay attention to the member variables defined at the end. 
 class Application : public VulkanGraphicsApp
@@ -91,6 +88,11 @@ class Application : public VulkanGraphicsApp
     void updateView();
     void updatePerspective();
     void cleanup();
+
+    //updates shading based on key holds
+    void observeCurrentShadingLayer();
+    //records the original shading.
+    void recordShadingLayers();
 
     static void resizeCallback(GLFWwindow* aWindow, int aWidth, int aHeight);
     static void scrollCallback(GLFWwindow* aWindow, double aXOffset, double aYOffset);
@@ -111,9 +113,11 @@ class Application : public VulkanGraphicsApp
     std::unordered_map<std::string, UniformTransformDataPtr> mObjectTransforms;
     /// Collection of extra per-object data. Contains an entry for each object in mObjects.
     std::unordered_map<std::string, UniformAnimShadeDataPtr> mObjectAnimShade;
+    //holds the original state of each of the object's shading layer
+    std::unordered_map<std::string, ShadingLayer> mKeyCallbackHolds;
     
-    std::unordered_map<std::string, UniformTextureSamplerDataPtr> mObjectTextureSamplers;
-
+    
+    
     /// An wrapped instance of struct WorldInfo made available automatically as uniform data in our shaders.
     UniformWorldInfoPtr mWorldInfo = nullptr;
 
@@ -135,14 +139,30 @@ void Application::scrollCallback(GLFWwindow* aWindow, double aXOffset, double aY
     smViewZoom = glm::clamp(smViewZoom + float(-aYOffset)*scrollSensitivity, 2.0f, 30.0f);
 }
 
+void Application::recordShadingLayers() {
+    for (auto& obj : mObjectAnimShade) {
+        mKeyCallbackHolds[obj.first] = static_cast<ShadingLayer>(obj.second->getStruct().shadingLayer);
+    }
+}
+
+void Application::observeCurrentShadingLayer() {
+    for (auto& obj : mObjectAnimShade) {
+        if (currentShadingLayer == NO_FORCED_LAYER) { //revert to each object's original layer
+            obj.second->getStruct().shadingLayer = mKeyCallbackHolds[obj.first];
+        }
+        else { //observe and apply the current shading layer to all objects
+            obj.second->getStruct().shadingLayer = currentShadingLayer;
+        }
+    }
+}
+
 /** Keyboard callback:
  *    G: Toggle cursor grabbing. A grabbed cursor makes controlling the view easier.
  *    F, F11: Toggle fullscreen view.
  *    ESC: Close the application
 */
 void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int action, int mods){
-    if(key == GLFW_KEY_G && action == GLFW_PRESS)
-    {
+    if(key == GLFW_KEY_G && action == GLFW_PRESS){
         int mode = glfwGetInputMode(aWindow, GLFW_CURSOR);
         if(mode != GLFW_CURSOR_DISABLED){
             glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -150,12 +170,42 @@ void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int ac
             glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
     }
-    else if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-    {
+    //modes start. They are the corresponding enum values, shifted up 1 for use on a keyboard.
+    else if (key == GLFW_KEY_1 && action == GLFW_PRESS){ 
+        currentShadingLayer = BLINN_PHONG;
+    }
+    else if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
+        currentShadingLayer = NO_FORCED_LAYER;
+    }
+    else if (key == GLFW_KEY_2 && action == GLFW_PRESS){
+        currentShadingLayer = NORMAL_MAP;
+    }
+    else if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
+        currentShadingLayer = NO_FORCED_LAYER;
+    }
+    else if (key == GLFW_KEY_3 && action == GLFW_PRESS){
+        currentShadingLayer = TEXTURE_MAP;
+    }
+    else if (key == GLFW_KEY_3 && action == GLFW_RELEASE) {
+        currentShadingLayer = NO_FORCED_LAYER;
+    }
+    else if (key == GLFW_KEY_4 && action == GLFW_PRESS){
+        currentShadingLayer = TEXTURED_FLAT;
+    }
+    else if (key == GLFW_KEY_4 && action == GLFW_RELEASE) {
+        currentShadingLayer = NO_FORCED_LAYER;
+    }
+    else if (key == GLFW_KEY_5 && action == GLFW_PRESS){
+        currentShadingLayer = TEXTURED_SHADED;
+    }
+    else if (key == GLFW_KEY_5 && action == GLFW_RELEASE){
+        currentShadingLayer = NO_FORCED_LAYER;
+    }
+    //modes end
+    else if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(aWindow, GLFW_TRUE);
     }
-    else if((key == GLFW_KEY_F11 || key == GLFW_KEY_F) && action == GLFW_PRESS)
-    {
+    else if((key == GLFW_KEY_F11 || key == GLFW_KEY_F) && action == GLFW_PRESS){
         GLFWmonitor* monitor = glfwGetWindowMonitor(aWindow);
         static int winLastWidth = 854, winLastHeight = 480;
         
@@ -169,7 +219,8 @@ void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int ac
             }
             glfwGetWindowSize(aWindow, &winLastWidth, &winLastHeight);
             glfwSetWindowMonitor(aWindow, monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
-        }else{
+        }
+        else{
             // Fullscreen, go back to windowed.
             glfwSetWindowMonitor(aWindow, nullptr, 0, 0, winLastWidth, winLastHeight, GLFW_DONT_CARE);
         }
@@ -217,7 +268,8 @@ void Application::run(){
     while(!glfwWindowShouldClose(window)){
         // Poll for window events, keyboard and mouse button presses, ect...
         glfwPollEvents();
-
+        //set shading layers based on polled events
+        observeCurrentShadingLayer();
         // Update view matrix
         updateView();
 
@@ -305,7 +357,7 @@ void Application::render(double dt){
     ballTfs->getStruct().Model = glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
 
     // Rotate all other objects around the Vulkan logo in the center
-    float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
+    constexpr float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
     float radius = 4.5f;
     monkeyTfs->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*0), .2f*sin(gt*4.0f+angle*0), sin(angle*0))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
     bunnyTfs->getStruct().Model  = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*1), .2f*sin(gt*4.0f+angle*1), sin(angle*1))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
@@ -321,18 +373,21 @@ void initBlinnPhongColorMap(unordered_map<string, AnimShadeData> *map) {
         glm::vec4(0.0, 1.0, 1.0, 1.0),
         glm::vec4(0.05, 0.05, 0.05, 1.0),
         glm::vec4(0.5, 0.5, 0.5, 1.0),
-        100.0f
+        100.0f,
+        false
     );
     (*map)["red"] = AnimShadeData(
         glm::vec4(1.0, 0.0, 0.0, 1.0),
         glm::vec4(0.05, 0.05, 0.05, 1.0),
         glm::vec4(0.5, 0.5, 0.5, 1.0),
-        100.0f
+        100.0f,
+        false
     );
     //example of setting diffuse and shininess only
     (*map)["purple"] = AnimShadeData(
         glm::vec4(0.5, 0.1, 0.7, 1.0),
-        50.0f
+        50.0f,
+        false
     );
     //example of default initialization
     (*map)["steel"] = AnimShadeData();
@@ -359,11 +414,6 @@ void Application::initGeometry(){
     mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
     mObjectAnimShade["ballTex"] = UniformAnimShadeData::create();
 
-    mObjectTextureSamplers["vulkan"] = UniformTextureSamplerData::create();
-    mObjectTextureSamplers["monkey"] = UniformTextureSamplerData::create();
-    mObjectTextureSamplers["bunny"] = UniformTextureSamplerData::create();
-    mObjectTextureSamplers["teapot"] = UniformTextureSamplerData::create();
-    mObjectTextureSamplers["ballTex"] = UniformTextureSamplerData::create();
     
     //Make a color map
     auto BlPhColors = unordered_map<string, AnimShadeData>();
@@ -372,8 +422,12 @@ void Application::initGeometry(){
     //set uniform shading data to colors defined in color map
     mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
     mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
-    mObjectAnimShade["monkey"]->setStruct(BlPhColors["purple"]);
-
+    mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED));
+    mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED));
+    
+    
+    //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
+    recordShadingLayers();
     // Add object to the scene along with its uniform data
     VulkanGraphicsApp::addMultiShapeObject(
         mObjects["vulkan"], // The object
@@ -382,15 +436,15 @@ void Application::initGeometry(){
         {
             {1, mObjectTransforms["vulkan"]}, // Bind transform matrix to binding point #1
             {2, mObjectAnimShade["vulkan"]}, // Bind other uniform data to binding point #2
-            {3, mObjectTextureSamplers["ballTex"]}
         }
+        
     );
-
+    
     // Add the other objects the same way as above. 
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["monkey"], {{1, mObjectTransforms["monkey"]}, {2, mObjectAnimShade["monkey"]}, {3, mObjectTextureSamplers["ballTex"]} });
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["bunny"], {{1, mObjectTransforms["bunny"]}, {2, mObjectAnimShade["bunny"]}, {3, mObjectTextureSamplers["ballTex"]} });
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}, {3, mObjectTextureSamplers["ballTex"]} });
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]}, {3, mObjectTextureSamplers["ballTex"]} });
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["monkey"], {{1, mObjectTransforms["monkey"]}, {2, mObjectAnimShade["monkey"]}});
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["bunny"], {{1, mObjectTransforms["bunny"]}, {2, mObjectAnimShade["bunny"]}});
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}});
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]}});
 }
 
 /// Initialize our shaders
@@ -410,8 +464,6 @@ void Application::initShaders(){
 }
 
 
-
-
 /// Initialize uniform data and bind them.
 void Application::initUniforms(){
 
@@ -423,8 +475,7 @@ void Application::initUniforms(){
     mUniformLayoutSet = UniformDataLayoutSet{
         // {<binding point>, <structure layout>}
         {1, UniformTransformData::sGetLayout()}, // Transform data on binding point #1
-        {2, UniformAnimShadeData::sGetLayout()}, // Blinn-Phong data on binding point #2
-        {3, UniformTextureSamplerData::sGetLayout()}
+        {2, UniformAnimShadeData::sGetLayout()} // Blinn-Phong data on binding point #2
     };
     
     VulkanGraphicsApp::initMultis(mUniformLayoutSet);

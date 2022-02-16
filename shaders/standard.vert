@@ -20,7 +20,7 @@ layout(binding = 1) uniform Transform{
 } uModel;
 
 void main(){
-    texCoord = W_texCoord;
+    texCoord = vec2(W_texCoord.x, -W_texCoord.y); //Vulkan, in its infinite wisdom, inverts the y-coordinate.
     W_fragPos = uModel.Model * vertPos; // Fragment position in world space
     W_fragNor = mat3(uModel.Model) * vertNor.xyz; // Fragment normal in world space
     

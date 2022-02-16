@@ -1,5 +1,11 @@
+/*
+* contents adapted from https://vulkan-tutorial.com/
+* Creative Commons 0 Licensing information: https://creativecommons.org/publicdomain/zero/1.0/
+*/
+
 #include "load_texture.h"
 #include "VulkanGraphicsApp.h"
+#include "vkutils/VmaHost.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -15,6 +21,25 @@ TextureLoader::TextureLoader() :
 
 TextureLoader::~TextureLoader() {}
 
+
+
+std::vector<VkDescriptorSetLayoutBinding> TextureLoader::getDescriptorSetLayoutBindings(int bindingNum) const {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+    
+    VkDescriptorSetLayoutBinding samplerBinding{};
+    samplerBinding.binding = bindingNum;
+    samplerBinding.descriptorCount = 1;
+    samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerBinding.pImmutableSamplers = nullptr;
+    samplerBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    
+    bindings.push_back(samplerBinding);
+
+    return(bindings);
+}
+
+
+
 //returns the first available memory type index for a given physicalDevice
 uint32_t findMemoryType(VulkanDeviceBundle deviceBundle, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -24,7 +49,7 @@ uint32_t findMemoryType(VulkanDeviceBundle deviceBundle, uint32_t typeFilter, Vk
             return i;
         }
     }
-    cerr << "failed to fine suitable memory type. Consider expanding typeFilter, or reexamining properties." << endl;
+    cerr << "failed to find suitable memory type. Consider expanding typeFilter, or reexamining properties." << endl;
     exit(1);
 }
 
@@ -61,60 +86,84 @@ void TextureLoader::createBuffer(VkDeviceSize size, VkBufferUsageFlags bufferUsa
     vkBindBufferMemory(deviceBundle.logicalDevice.handle(), buffer, bufferMemory, 0);
 }
 
-const Texture TextureLoader::getTexture() {
-    return activeTexture; 
+
+const Texture* TextureLoader::getTexture(uint32_t index) const
+{
+    if (index > mInstanceCount - 1 || index < 0) {
+        cerr << "invalid index, textureLoader contains only" << mInstanceCount << " valid indices" << endl;
+        exit(1);
+    }
+    return &textures[index];
 }
 
-void TextureLoader::createTextureImage(string textureName, string imagePath){
-    textures[textureName] = Texture(deviceBundle.logicalDevice.handle());
+std::vector<VkDescriptorImageInfo> TextureLoader::getDescriptorImageInfos(){
+    std::vector<VkDescriptorImageInfo> infos;
+    for (uint32_t i = 0; i < mInstanceCount; i++) {
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView = textures[i].imageView;
+        imageInfo.sampler = textures[i].sampler;
+
+        infos.push_back(imageInfo);
+    }
+    return(infos);
+}
+
+void TextureLoader::createTexture(string imagePath){
+    if (commandPool == VK_NULL_HANDLE) {
+        throw std::exception("TextureLoader::setup() must be called with a valid command pool, before creating texture images.");
+    }
+
+    textures.emplace_back(Texture(deviceBundle.logicalDevice.handle()));
     stbi_uc* pixels = stbi_load(
         imagePath.c_str(), //the path of the image
-        &textures[textureName].width, //width of the image
-        &textures[textureName].height, //height of the image
-        &textures[textureName].numTextureChannels, //the actual number of channels in the raw image
+        &textures.back().width, //width of the image
+        &textures.back().height, //height of the image
+        &textures.back().numTextureChannels, //the actual number of channels in the raw image
         STBI_rgb_alpha); //adds an alpha channel to the image for formatting consistency
     if (!pixels) {
         cerr << "failed to load texture: " << imagePath << endl; //TODO maybe throw exception here
         exit(1);
     }
-    VkDeviceSize imageSize = textures[textureName].width * textures[textureName].height * STBI_rgb_alpha;
+    VkDeviceSize imageSize = (VkDeviceSize)textures.back().width * textures.back().height * STBI_rgb_alpha;
     
     createBuffer(
         imageSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        textures[textureName].stagingBuffer,
-        textures[textureName].stagingBufferMemory);
+        textures.back().stagingBuffer,
+        textures.back().stagingBufferMemory);
 
     void* data;
-    vkMapMemory(deviceBundle.logicalDevice.handle(), textures[textureName].stagingBufferMemory, 0, imageSize, 0, &data);
+    vkMapMemory(deviceBundle.logicalDevice.handle(), textures.back().stagingBufferMemory, 0, imageSize, 0, &data);
         memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(deviceBundle.logicalDevice.handle(), textures[textureName].stagingBufferMemory);
+    vkUnmapMemory(deviceBundle.logicalDevice.handle(), textures.back().stagingBufferMemory);
     stbi_image_free(pixels);
 
-    textures[textureName].createImage(deviceBundle);
-    transitionImageLayout(textures[textureName].image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        copyBufferToImage(textures[textureName].stagingBuffer, textures[textureName].image, static_cast<uint32_t>(textures[textureName].width), static_cast<uint32_t>(textures[textureName].height));
-    transitionImageLayout(textures[textureName].image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    textures.back().createImage(deviceBundle);
+    transitionImageLayout(textures.back().image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        copyBufferToImage(textures.back().stagingBuffer, textures.back().image, static_cast<uint32_t>(textures.back().width), static_cast<uint32_t>(textures.back().height));
+    transitionImageLayout(textures.back().image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    vkDestroyBuffer(deviceBundle.logicalDevice.handle(), textures[textureName].stagingBuffer, nullptr);
-    vkFreeMemory(deviceBundle.logicalDevice.handle(), textures[textureName].stagingBufferMemory, nullptr);
+    vkDestroyBuffer(deviceBundle.logicalDevice.handle(), textures.back().stagingBuffer, nullptr);
+    vkFreeMemory(deviceBundle.logicalDevice.handle(), textures.back().stagingBufferMemory, nullptr);
 
-    textures[textureName].createImageView();
+    textures.back().createImageView();
+    textures.back().createSampler();
+    mInstanceCount++;
 }
 
 void TextureLoader::setup(VkCommandPool commandPool){
     this->commandPool = commandPool;
-    createSampler();
+    
 }
 
 void TextureLoader::cleanup(){
-    //free the sampler used for each texture
-    vkDestroySampler(deviceBundle.logicalDevice.handle(), activeSampler, nullptr);
+    
+    
     //free texture data
-    for (auto texture : textures) {
-        auto tex = texture.second;
-        
+    for (auto tex : textures) {
+        vkDestroySampler(tex.device, tex.sampler, nullptr);
         //free the texture image view, must be done before freeing the image itself
         vkDestroyImageView(tex.device, tex.imageView, nullptr);
         //free the texture image
@@ -122,7 +171,6 @@ void TextureLoader::cleanup(){
         vkFreeMemory(tex.device, tex.imageMemory, nullptr);
     }
 }
-
 
 Texture::~Texture(){
     
@@ -168,7 +216,9 @@ void Texture::createImageView(){
     }
 }
 
-void TextureLoader::createSampler(){
+//for now, use a pretty generic sampler for all textures. Can overload to provide more options, and potentially move a set of common
+//samplers into the TextureLoader class.
+void Texture::createSampler(){
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_NEAREST; //No filtering. Other option is VK_FILTER_LINEAR for bilinear filtering
@@ -193,7 +243,7 @@ void TextureLoader::createSampler(){
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
     
-    if (VK_SUCCESS != vkCreateSampler(deviceBundle.logicalDevice.handle(), &samplerInfo, nullptr, &activeSampler)) {
+    if (VK_SUCCESS != vkCreateSampler(device, &samplerInfo, nullptr, &sampler)) {
         cerr << "failed to create texture sampler" << endl;
         exit(1);
     }
@@ -243,6 +293,9 @@ void TextureLoader::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t w
     region.imageSubresource.layerCount = 1;
     region.imageOffset = { 0,0,0 };
     region.imageExtent = { width, height, 1 };
+
+    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
     endSingleTimeCommands(commandBuffer);
 }
 
@@ -250,7 +303,7 @@ void TextureLoader::transitionImageLayout(VkImage image, VkFormat format, VkImag
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
     
     VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER; //pipeline barrier
     barrier.oldLayout = oldLayout;
     barrier.newLayout = newLayout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;

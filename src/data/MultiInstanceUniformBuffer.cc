@@ -54,7 +54,7 @@ MultiInstanceUniformBuffer::MultiInstanceUniformBuffer(
         
         mLayoutBindings.emplace_back(VkDescriptorSetLayoutBinding{
             /* binding = */ binding,
-            /* descriptorType = */ (isCIS(layout)) ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            /* descriptorType = */ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             /* descriptorCount = */ 1,
             /* stageFlags = */ aShaderStages,
             /* pImmutableSamplers = */ nullptr
@@ -188,35 +188,15 @@ const std::vector<VkDescriptorSetLayoutBinding>& MultiInstanceUniformBuffer::get
 std::map<uint32_t, VkDescriptorBufferInfo> MultiInstanceUniformBuffer::getDescriptorBufferInfos() const{
     std::map<uint32_t, VkDescriptorBufferInfo> infos;
     for(const std::pair<uint32_t, UniformDataLayoutPtr>& setEntry : mBoundLayouts){
-        if (!isCIS(setEntry.second)) {
-            infos.emplace(
-                setEntry.first,
-                VkDescriptorBufferInfo{
-                    mUniformBuffer,
-                    mBoundLayouts.getBoundDataOffset(setEntry.first, mBufferAlignmentSize),
-                    setEntry.second->getDataSize()
-                });
-        }
+        infos.emplace(
+            setEntry.first,
+            VkDescriptorBufferInfo{
+                mUniformBuffer,
+                mBoundLayouts.getBoundDataOffset(setEntry.first, mBufferAlignmentSize),
+                setEntry.second->getDataSize()
+            });
+        
     }
-    return(infos);
-}
-
-std::map<uint32_t, VkDescriptorImageInfo> MultiInstanceUniformBuffer::getDescriptorImageInfos(TextureLoader& textureLoader) const{
-    std::map<uint32_t, VkDescriptorImageInfo> infos;
-    for (const std::pair<uint32_t, UniformDataLayoutPtr>& setEntry : mBoundLayouts) {
-        if (isCIS(setEntry.second)) {
-            std::cout << typeid(*setEntry.second).name() << std::endl;
-            infos.emplace(
-                setEntry.first,
-                VkDescriptorImageInfo{
-                    /*sampler = */textureLoader.getSampler(),
-                    /*imageView =*/textureLoader.getTexture().imageView, //TODO change to active texture
-                    /*imageLayout =*/VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                }
-            );
-        }
-    }
-    std::cout << "here!";
     return(infos);
 }
 

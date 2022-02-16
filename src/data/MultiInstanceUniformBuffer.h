@@ -76,7 +76,7 @@ class MultiInstanceUniformBuffer : public DirectlySyncedBufferInterface
 
     size_t getPaddedInstanceDataSize() const {return(mBoundLayouts.getTotalPaddedSize(mBufferAlignmentSize));}
 
-    const size_t dynamicOffsetCount() const {return(mBoundLayouts.size()-1);}
+    const size_t dynamicOffsetCount() const {return(mBoundLayouts.size());}
     const uint32_t* getDynamicOffsets(instance_index_t aInstance) const {return(mBlockOffsets[aInstance].data());}
 
     /// Returns true if any bound uniform data is dirtied.

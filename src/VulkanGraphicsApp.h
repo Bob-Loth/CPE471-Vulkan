@@ -76,6 +76,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     void initUniformDescriptorPool();
     void allocateDescriptorSets();
     void writeDescriptorSets();
+    void updateDescriptorSets(uint32_t objIdx);
     void reinitUniformResources();
 
     size_t mFrameNumber = 0;
@@ -102,7 +103,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
 
     std::vector<ObjMultiShapeGeometry> mMultiShapeObjects;
 
-    std::shared_ptr<MultiInstanceCombinedImageSampler> mCombinedImageSampler = nullptr;
+    
     std::shared_ptr<MultiInstanceUniformBuffer> mMultiUniformBuffer = nullptr;
     
     UniformBuffer mSingleUniformBuffer; 
