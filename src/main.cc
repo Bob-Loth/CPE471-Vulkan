@@ -56,16 +56,17 @@ struct AnimShadeData {
     glm::vec4 specularData = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
     float shininess = 300.0f;
     uint32_t shadingLayer = 0;
+    uint32_t textureIndex = 0;
     //default steely material
     AnimShadeData() {};
     //textures only
-    AnimShadeData(uint32_t mode) : shadingLayer(mode) {}
+    AnimShadeData(uint32_t mode, uint32_t texIdx) : shadingLayer(mode), textureIndex(texIdx) {}
     //Use to edit diffuse and shininess only
-    AnimShadeData(glm::vec4 dif, float shn, uint32_t mode) :
-        diffuseData(dif), shininess(shn), shadingLayer(mode) {}
+    AnimShadeData(glm::vec4 dif, float shn, uint32_t mode, uint32_t texIdx) :
+        diffuseData(dif), shininess(shn), shadingLayer(mode), textureIndex(texIdx) {}
     //Use to fully control material properties
-    AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn, uint32_t mode) :
-        diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn), shadingLayer(mode) {}
+    AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn, uint32_t mode, uint32_t texIdx) :
+        diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn), shadingLayer(mode), textureIndex(texIdx) {}
 
 };
 
@@ -374,6 +375,7 @@ void initBlinnPhongColorMap(unordered_map<string, AnimShadeData> *map) {
         glm::vec4(0.05, 0.05, 0.05, 1.0),
         glm::vec4(0.5, 0.5, 0.5, 1.0),
         100.0f,
+        0,
         false
     );
     (*map)["red"] = AnimShadeData(
@@ -381,12 +383,14 @@ void initBlinnPhongColorMap(unordered_map<string, AnimShadeData> *map) {
         glm::vec4(0.05, 0.05, 0.05, 1.0),
         glm::vec4(0.5, 0.5, 0.5, 1.0),
         100.0f,
+        0,
         false
     );
     //example of setting diffuse and shininess only
     (*map)["purple"] = AnimShadeData(
         glm::vec4(0.5, 0.1, 0.7, 1.0),
         50.0f,
+        0,
         false
     );
     //example of default initialization
@@ -422,8 +426,8 @@ void Application::initGeometry(){
     //set uniform shading data to colors defined in color map
     mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
     mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
-    mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED));
-    mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED));
+    mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
+    mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
     
     
     //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.

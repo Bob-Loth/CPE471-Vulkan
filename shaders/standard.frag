@@ -1,4 +1,5 @@
 #version 450 core
+#extension GL_ARB_separate_shader_objects : enable
 #include "shading.inl" // Vulkan pre-compiled glsl allows include statements!
 
 const uint LIGHTS = 8;
@@ -31,13 +32,14 @@ layout(binding = 2) uniform AnimShadeData {
     vec4 specularData;
     float shininess;
     uint shadingLayer;
+    uint textureIndex;
 } uAnimShade;
 
-layout(binding = 3) uniform sampler2D texSampler;
+layout(binding = 3) uniform sampler2D texSampler[16];
 
 
 void main(){
-    vec4 texColor = texture(texSampler, texCoord);
+    vec4 texColor = texture(texSampler[uAnimShade.textureIndex], texCoord);
 
     float brightnessCoefficient = 0.4f / LIGHTS;
     vec3 normal = normalize(W_fragNor);

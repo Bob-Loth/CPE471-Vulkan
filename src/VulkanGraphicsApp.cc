@@ -31,17 +31,17 @@ void VulkanGraphicsApp::init(){
 //Vulkan with no extensions requires imageViews to point to a non-null image.
 //This is why this is called before initializing descriptor sets/layouts, and not during main.
 //The order in which you create these matters, see TextureLoader::getDescriptorImageInfos()
-//and its usage in VulkanGraphicsApp:updateDescriptorSets().
+//and its usage in VulkanGraphicsApp:writeDescriptorSets().
 //Might rework TextureLoader into using a map again, using same naming as main's objects.
+//The code currently uses array textures, with up to 16 textures per array supported, from what I could find on their minimum support.
+//TODO add fallback for any graphics devices that don't support array textures (query in device setup)
 void VulkanGraphicsApp::initTextures() {
     //give the command pool handle to use in submitting vkCmdCopyBufferToImage command, for one-time transfer to GPU memory
     textureLoader.setup(mCommandPool);
-    //textureLoader.createTextureImage(STRIFY(ASSET_DIR) "/1x1.png");
+    //Consider using a fallback texture, like this transparent image. Or bright solid white, depending on the background.
     textureLoader.createTexture(STRIFY(ASSET_DIR) "/1x1.png");
     textureLoader.createTexture(STRIFY(ASSET_DIR) "/ballTex.png");
-    textureLoader.createTexture(STRIFY(ASSET_DIR) "/1x1.png");
-    textureLoader.createTexture(STRIFY(ASSET_DIR) "/1x1.png");
-    textureLoader.createTexture(STRIFY(ASSET_DIR) "/1x1.png");
+    textureLoader.createTexture(STRIFY(ASSET_DIR) "crate.jpg");
 }
 
 const VkExtent2D& VulkanGraphicsApp::getFramebufferSize() const{
@@ -350,8 +350,7 @@ void VulkanGraphicsApp::initCommands(){
             // Bind uniforms to graphics pipeline if they exist with correct dynamic offset for this object instance
             if(mMultiUniformBuffer->boundLayoutCount() > 0 || mSingleUniformBuffer.boundInterfaceCount() > 0){
                 
-                if(objIdx < textureLoader.size()) 
-                    updateDescriptorSets(objIdx);
+                
                 vkCmdBindDescriptorSets(
              /*command buffer to bind to*/  mCommandBuffers[i],
              /*pipeline bind point*/        VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -552,7 +551,7 @@ void VulkanGraphicsApp::initUniformDescriptorPool() {
     VkDescriptorPoolSize poolSizes[3] = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, dynamicPoolSize},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, staticPoolSize},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, dynamicPoolSize}
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, dynamicPoolSize * 16}
     };
 
     VkDescriptorPoolCreateInfo createInfo;
@@ -595,14 +594,13 @@ void VulkanGraphicsApp::updateDescriptorSets(uint32_t objIdx) {
     std::map<uint32_t, VkDescriptorBufferInfo> bufferInfos = merge(mSingleUniformBuffer.getDescriptorBufferInfos(), mMultiUniformBuffer->getDescriptorBufferInfos());
     uint32_t imageDescriptorNumber = bufferInfos.size();
 
-    std::vector<VkDescriptorImageInfo> imageInfos = textureLoader.getDescriptorImageInfos();
+    std::array<VkDescriptorImageInfo,16> imageInfos = textureLoader.getDescriptorImageInfos();
     std::vector<VkWriteDescriptorSet> setWriters;
 
     uint32_t imageInfoDescriptorSetBinding = bufferInfos.size(); //assume that non-CIS buffer descriptors start at 0 and increment
 
 
     setWriters.reserve(mUniformDescriptorSets.size() * (bufferInfos.size() + imageInfos.size()));
-    std::cout << mUniformDescriptorSets.size() << " size" << std::endl;
     VkBuffer staticUB = mSingleUniformBuffer.handle();
     VkBuffer dynamicUB = mMultiUniformBuffer->handle();
     
@@ -634,9 +632,9 @@ void VulkanGraphicsApp::updateDescriptorSets(uint32_t objIdx) {
                 /* dstSet = */ descriptorSet,
                 /* dstBinding = */ imageDescriptorNumber,
                 /* dstArrayElement = */ 0,
-                /* descriptorCount = */ 1,
+                /* descriptorCount = */ 16,
                 /* descriptorType = */ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                /* pImageInfo = */ &imageInfos[objIdx],
+                /* pImageInfo = */ imageInfos.data(),
                 /* pBufferInfo = */nullptr,
                 /* pTexelBufferView = */ nullptr
             }
@@ -651,14 +649,14 @@ void VulkanGraphicsApp::writeDescriptorSets(){
     std::map<uint32_t, VkDescriptorBufferInfo> bufferInfos = merge(mSingleUniformBuffer.getDescriptorBufferInfos(), mMultiUniformBuffer->getDescriptorBufferInfos());
     uint32_t imageDescriptorNumber = bufferInfos.size();
 
-    std::vector<VkDescriptorImageInfo> imageInfos = textureLoader.getDescriptorImageInfos();
+    std::array<VkDescriptorImageInfo, 16> imageInfos = textureLoader.getDescriptorImageInfos();
     std::vector<VkWriteDescriptorSet> setWriters;
 
     uint32_t imageInfoDescriptorSetBinding = bufferInfos.size(); //assume that non-CIS buffer descriptors start at 0 and increment
 
 
     setWriters.reserve(mUniformDescriptorSets.size() * (bufferInfos.size() + imageInfos.size()));
-    std::cout << mUniformDescriptorSets.size() << " size" << std::endl;
+    
     VkBuffer staticUB = mSingleUniformBuffer.handle();
     VkBuffer dynamicUB = mMultiUniformBuffer->handle();
     uint32_t i = 0;
@@ -690,15 +688,13 @@ void VulkanGraphicsApp::writeDescriptorSets(){
                 /* dstSet = */ descriptorSet,
                 /* dstBinding = */ imageDescriptorNumber,
                 /* dstArrayElement = */ 0,
-                /* descriptorCount = */ 1,
+                /* descriptorCount = */ 16,
                 /* descriptorType = */ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                /* pImageInfo = */ &imageInfos[0],
+                /* pImageInfo = */ imageInfos.data(),
                 /* pBufferInfo = */nullptr,
                 /* pTexelBufferView = */ nullptr
             }
         );
-        std::cout << i << std::endl;
-        i++;
     }
     vkUpdateDescriptorSets(getPrimaryDeviceBundle().logicalDevice, setWriters.size(), setWriters.data(), 0, nullptr);
 }

@@ -28,7 +28,7 @@ std::vector<VkDescriptorSetLayoutBinding> TextureLoader::getDescriptorSetLayoutB
     
     VkDescriptorSetLayoutBinding samplerBinding{};
     samplerBinding.binding = bindingNum;
-    samplerBinding.descriptorCount = 1;
+    samplerBinding.descriptorCount = 16;
     samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplerBinding.pImmutableSamplers = nullptr;
     samplerBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -96,15 +96,23 @@ const Texture* TextureLoader::getTexture(uint32_t index) const
     return &textures[index];
 }
 
-std::vector<VkDescriptorImageInfo> TextureLoader::getDescriptorImageInfos(){
-    std::vector<VkDescriptorImageInfo> infos;
-    for (uint32_t i = 0; i < mInstanceCount; i++) {
+std::array<VkDescriptorImageInfo, 16> TextureLoader::getDescriptorImageInfos(){
+    std::array<VkDescriptorImageInfo, 16> infos;
+    for (uint32_t i = 0; i < textures.size(); i++) {
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView = textures[i].imageView;
         imageInfo.sampler = textures[i].sampler;
 
-        infos.push_back(imageInfo);
+        infos[i] = imageInfo;
+    }
+    for (uint32_t i = textures.size(); i < 16; i++) {
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView = textures[0].imageView;
+        imageInfo.sampler = textures[0].sampler;
+
+        infos[i] = imageInfo;
     }
     return(infos);
 }

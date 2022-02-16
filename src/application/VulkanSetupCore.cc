@@ -70,9 +70,13 @@ std::vector<std::string> VulkanSetupCore::gatherDeviceExtensions(){
     const std::vector<std::string>& selfRequested = getRequestedDeviceExtensions();
     std::set<std::string> required(selfRequired.begin(), selfRequired.end());
     std::set<std::string> requested(selfRequested.begin(), selfRequested.end());
+#ifdef __arm__
     requested.emplace("VK_KHR_portability_subset");
-    requested.emplace("VK_KHR_maintenance3");
-    requested.emplace("VK_EXT_descriptor_indexing");
+#endif // __arm__
+
+    
+    
+    
     for(const VulkanProviderInterface* dependent : _mDependentProviders){
         const std::vector<std::string>& dRequested = dependent->getRequestedDeviceExtensions();
         const std::vector<std::string>& dRequired = dependent->getRequiredDeviceExtensions();

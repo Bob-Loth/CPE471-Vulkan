@@ -50,10 +50,9 @@ public:
 	
 	
 	const Texture* getTexture(uint32_t index) const;
-	std::vector<VkDescriptorImageInfo> getDescriptorImageInfos();
+	std::array<VkDescriptorImageInfo, 16> getDescriptorImageInfos();
 	std::vector<VkDescriptorSetLayoutBinding> getDescriptorSetLayoutBindings(int bindingNum) const; 
-	void TextureLoader::updateBindings();
-	void TextureLoader::updateSingleBinding(uint32_t aInstance, uint32_t aBinding);
+	
 	void setup(VkCommandPool commandPool);
 	void cleanup();
 	size_t size() { return textures.size(); }
