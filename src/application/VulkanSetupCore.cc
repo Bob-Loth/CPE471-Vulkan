@@ -32,7 +32,10 @@ std::vector<std::string> VulkanSetupCore::gatherInstanceExtensions(){
     const std::vector<std::string>& selfRequested = getRequestedInstanceExtensions();
     std::set<std::string> required(selfRequired.begin(), selfRequired.end());
     std::set<std::string> requested(selfRequested.begin(), selfRequested.end());
-    requested.emplace("VK_KHR_get_physical_device_properties2");
+    #ifdef __arm64__
+        requested.emplace("VK_KHR_get_physical_device_properties2");
+    #endif
+    
     
     for(const VulkanProviderInterface* dependent : _mDependentProviders){
         const std::vector<std::string>& dRequested = dependent->getRequestedInstanceExtensions();
