@@ -425,7 +425,7 @@ void Application::initGeometry(){
 
     //set uniform shading data to colors defined in color map
     mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
-    mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
+    mObjectAnimShade["vulkan"]->setStruct(AnimShadeData(TEXTURED_SHADED, 3));
     mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED, 2));
     mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
     

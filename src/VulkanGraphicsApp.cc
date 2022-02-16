@@ -42,6 +42,7 @@ void VulkanGraphicsApp::initTextures() {
     textureLoader.createTexture(STRIFY(ASSET_DIR) "/1x1.png");
     textureLoader.createTexture(STRIFY(ASSET_DIR) "/ballTex.png");
     textureLoader.createTexture(STRIFY(ASSET_DIR) "crate.jpg");
+    textureLoader.createTexture(STRIFY(ASSET_DIR) "flower.jpg");
 }
 
 const VkExtent2D& VulkanGraphicsApp::getFramebufferSize() const{
