@@ -119,7 +119,7 @@ std::array<VkDescriptorImageInfo, 16> TextureLoader::getDescriptorImageInfos(){
 
 void TextureLoader::createTexture(string imagePath){
     if (commandPool == VK_NULL_HANDLE) {
-        throw std::exception("TextureLoader::setup() must be called with a valid command pool, before creating texture images.");
+        throw TextureLoaderException( "TextureLoader::setup() must be called with a valid command pool, before creating texture images.");
     }
 
     textures.emplace_back(Texture(deviceBundle.logicalDevice.handle()));

@@ -8,6 +8,7 @@
 #include <vector>
 #include <iostream>
 #include <map>
+#include <exception>
 #include "vkutils/vkutils.h"
 //vulkan types
 #include <vulkan/vulkan.h>
@@ -15,6 +16,15 @@
 
 #include <unordered_map>
 
+class TextureLoaderException : public std::exception {
+	public:
+    TextureLoaderException(const std::string& msg) : msg(msg){}
+    virtual const char* what() const noexcept override {return(whatstr.c_str());}
+
+    const std::string msg;
+ protected:
+    const std::string whatstr;
+};
 class Texture { //TODO add support for mipmapping
 public:
 	VkDevice device;

@@ -70,7 +70,7 @@ std::vector<std::string> VulkanSetupCore::gatherDeviceExtensions(){
     const std::vector<std::string>& selfRequested = getRequestedDeviceExtensions();
     std::set<std::string> required(selfRequired.begin(), selfRequired.end());
     std::set<std::string> requested(selfRequested.begin(), selfRequested.end());
-#ifdef __arm__
+#ifdef __arm64__
     requested.emplace("VK_KHR_portability_subset");
 #endif // __arm__
 
