@@ -38,8 +38,7 @@ void VulkanGraphicsApp::init(){
 void VulkanGraphicsApp::initTextures() {
     //give the command pool handle to use in submitting vkCmdCopyBufferToImage command, for one-time transfer to GPU memory
     textureLoader.setup(mCommandPool);
-    //Consider using a fallback texture, like this transparent image. Or bright solid white, depending on the background.
-    textureLoader.createTexture(STRIFY(ASSET_DIR) "/1x1.png");
+    
     textureLoader.createTexture(STRIFY(ASSET_DIR) "/ballTex.png");
     textureLoader.createTexture(STRIFY(ASSET_DIR) "crate.jpg");
 }

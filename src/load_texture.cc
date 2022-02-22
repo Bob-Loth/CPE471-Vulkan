@@ -161,9 +161,56 @@ void TextureLoader::createTexture(string imagePath){
     mInstanceCount++;
 }
 
+void TextureLoader::createDebugTexture() {
+    if (commandPool == VK_NULL_HANDLE) {
+        throw TextureLoaderException("TextureLoader::setup() must be called with a valid command pool, before creating texture images.");
+    }
+
+    textures.emplace_back(Texture(deviceBundle.logicalDevice.handle()));
+    int height = 2, width = 2, channels = 4;
+    stbi_uc* pixels = new unsigned char[height * width * channels]; //height, width, channel number
+    for (int i = 0; i < height * width * channels;) {
+        //purple
+        pixels[i++] = 255;
+        pixels[i++] = 0;
+        pixels[i++] = 255;
+        pixels[i++] = 255;
+    }
+    textures.back().width = width;
+    textures.back().height = height;
+    textures.back().numTextureChannels = STBI_rgb_alpha;
+    VkDeviceSize imageSize = (VkDeviceSize)textures.back().width * textures.back().height * STBI_rgb_alpha;
+
+    createBuffer(
+        imageSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        textures.back().stagingBuffer,
+        textures.back().stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(deviceBundle.logicalDevice.handle(), textures.back().stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, static_cast<size_t>(imageSize));
+    vkUnmapMemory(deviceBundle.logicalDevice.handle(), textures.back().stagingBufferMemory);
+    stbi_image_free(pixels);
+
+    textures.back().createImage(deviceBundle);
+    transitionImageLayout(textures.back().image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copyBufferToImage(textures.back().stagingBuffer, textures.back().image, static_cast<uint32_t>(textures.back().width), static_cast<uint32_t>(textures.back().height));
+    transitionImageLayout(textures.back().image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vkDestroyBuffer(deviceBundle.logicalDevice.handle(), textures.back().stagingBuffer, nullptr);
+    vkFreeMemory(deviceBundle.logicalDevice.handle(), textures.back().stagingBufferMemory, nullptr);
+
+    textures.back().createImageView();
+    textures.back().createSampler();
+    mInstanceCount++;
+}
+
 void TextureLoader::setup(VkCommandPool commandPool){
     this->commandPool = commandPool;
-    
+    //Consider using a fallback texture, like this transparent image. Or bright solid white, depending on the background.
+    createDebugTexture();
 }
 
 void TextureLoader::cleanup(){

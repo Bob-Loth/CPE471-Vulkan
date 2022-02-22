@@ -39,9 +39,9 @@ layout(binding = 3) uniform sampler2D texSampler[16];
 
 
 void main(){
-    vec4 texColor = texture(texSampler[uAnimShade.textureIndex], texCoord);
+    vec4 texColor = texture(texSampler[uAnimShade.textureIndex + 1], texCoord);
 
-    float brightnessCoefficient = 0.4f / LIGHTS;
+    float brightnessCoefficient = 1.0f / LIGHTS;
     vec3 normal = normalize(W_fragNor);
 
     vec3 diffuse[LIGHTS];

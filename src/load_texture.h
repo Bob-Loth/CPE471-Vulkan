@@ -62,7 +62,7 @@ public:
 	const Texture* getTexture(uint32_t index) const;
 	std::array<VkDescriptorImageInfo, 16> getDescriptorImageInfos();
 	std::vector<VkDescriptorSetLayoutBinding> getDescriptorSetLayoutBindings(int bindingNum) const; 
-	
+	void createDebugTexture();
 	void setup(VkCommandPool commandPool);
 	void cleanup();
 	size_t size() { return textures.size(); }
