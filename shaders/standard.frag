@@ -3,7 +3,7 @@
 #include "shading.inl" // Vulkan pre-compiled glsl allows include statements!
 
 const uint LIGHTS = 8;
-const uint TEXTURE_ARRAY_SIZE = 8096;
+const uint TEXTURE_ARRAY_SIZE = 128;
 //enums
 const uint BLINN_PHONG     = 0;
 const uint NORMAL_MAP      = 1;
