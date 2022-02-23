@@ -28,7 +28,7 @@ std::vector<VkDescriptorSetLayoutBinding> TextureLoader::getDescriptorSetLayoutB
     
     VkDescriptorSetLayoutBinding samplerBinding{};
     samplerBinding.binding = bindingNum;
-    samplerBinding.descriptorCount = 16;
+    samplerBinding.descriptorCount = TEXTURE_ARRAY_SIZE;
     samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplerBinding.pImmutableSamplers = nullptr;
     samplerBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -96,8 +96,8 @@ const Texture* TextureLoader::getTexture(uint32_t index) const
     return &textures[index];
 }
 
-std::array<VkDescriptorImageInfo, 16> TextureLoader::getDescriptorImageInfos(){
-    std::array<VkDescriptorImageInfo, 16> infos;
+std::array<VkDescriptorImageInfo, TextureLoader::TEXTURE_ARRAY_SIZE> TextureLoader::getDescriptorImageInfos(){
+    std::array<VkDescriptorImageInfo, TEXTURE_ARRAY_SIZE> infos;
     for (uint32_t i = 0; i < textures.size(); i++) {
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -106,7 +106,7 @@ std::array<VkDescriptorImageInfo, 16> TextureLoader::getDescriptorImageInfos(){
 
         infos[i] = imageInfo;
     }
-    for (uint32_t i = textures.size(); i < 16; i++) {
+    for (uint32_t i = textures.size(); i < TEXTURE_ARRAY_SIZE; i++) {
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView = textures[0].imageView;
@@ -121,7 +121,10 @@ void TextureLoader::createTexture(string imagePath){
     if (commandPool == VK_NULL_HANDLE) {
         throw TextureLoaderException( "TextureLoader::setup() must be called with a valid command pool, before creating texture images.");
     }
-
+    if (textures.size() == TEXTURE_ARRAY_SIZE) {
+        throw TextureLoaderException("TextureLoader::createTexture has created the maximum amount of textures for the internal texture array,"
+            " including the debug texture at location 0. Increase the size of the texture array. (defined in TextureLoader::TEXTURE_ARRAY_SIZE)");
+    }
     textures.emplace_back(Texture(deviceBundle.logicalDevice.handle()));
     stbi_uc* pixels = stbi_load(
         imagePath.c_str(), //the path of the image

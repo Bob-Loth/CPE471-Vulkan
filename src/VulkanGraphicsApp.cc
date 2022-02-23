@@ -551,7 +551,7 @@ void VulkanGraphicsApp::initUniformDescriptorPool() {
     VkDescriptorPoolSize poolSizes[3] = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, dynamicPoolSize},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, staticPoolSize},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, dynamicPoolSize * 16}
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, dynamicPoolSize * TextureLoader::TEXTURE_ARRAY_SIZE}
     };
 
     VkDescriptorPoolCreateInfo createInfo;
@@ -594,7 +594,7 @@ void VulkanGraphicsApp::updateDescriptorSets(uint32_t objIdx) {
     std::map<uint32_t, VkDescriptorBufferInfo> bufferInfos = merge(mSingleUniformBuffer.getDescriptorBufferInfos(), mMultiUniformBuffer->getDescriptorBufferInfos());
     uint32_t imageDescriptorNumber = bufferInfos.size();
 
-    std::array<VkDescriptorImageInfo,16> imageInfos = textureLoader.getDescriptorImageInfos();
+    std::array<VkDescriptorImageInfo,TextureLoader::TEXTURE_ARRAY_SIZE> imageInfos = textureLoader.getDescriptorImageInfos();
     std::vector<VkWriteDescriptorSet> setWriters;
 
     uint32_t imageInfoDescriptorSetBinding = bufferInfos.size(); //assume that non-CIS buffer descriptors start at 0 and increment
@@ -632,7 +632,7 @@ void VulkanGraphicsApp::updateDescriptorSets(uint32_t objIdx) {
                 /* dstSet = */ descriptorSet,
                 /* dstBinding = */ imageDescriptorNumber,
                 /* dstArrayElement = */ 0,
-                /* descriptorCount = */ 16,
+                /* descriptorCount = */ TextureLoader::TEXTURE_ARRAY_SIZE,
                 /* descriptorType = */ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 /* pImageInfo = */ imageInfos.data(),
                 /* pBufferInfo = */nullptr,
@@ -649,7 +649,7 @@ void VulkanGraphicsApp::writeDescriptorSets(){
     std::map<uint32_t, VkDescriptorBufferInfo> bufferInfos = merge(mSingleUniformBuffer.getDescriptorBufferInfos(), mMultiUniformBuffer->getDescriptorBufferInfos());
     uint32_t imageDescriptorNumber = bufferInfos.size();
 
-    std::array<VkDescriptorImageInfo, 16> imageInfos = textureLoader.getDescriptorImageInfos();
+    std::array<VkDescriptorImageInfo, TextureLoader::TEXTURE_ARRAY_SIZE> imageInfos = textureLoader.getDescriptorImageInfos();
     std::vector<VkWriteDescriptorSet> setWriters;
 
     uint32_t imageInfoDescriptorSetBinding = bufferInfos.size(); //assume that non-CIS buffer descriptors start at 0 and increment
@@ -688,7 +688,7 @@ void VulkanGraphicsApp::writeDescriptorSets(){
                 /* dstSet = */ descriptorSet,
                 /* dstBinding = */ imageDescriptorNumber,
                 /* dstArrayElement = */ 0,
-                /* descriptorCount = */ 16,
+                /* descriptorCount = */ TextureLoader::TEXTURE_ARRAY_SIZE,
                 /* descriptorType = */ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 /* pImageInfo = */ imageInfos.data(),
                 /* pBufferInfo = */nullptr,

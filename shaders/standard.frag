@@ -3,7 +3,7 @@
 #include "shading.inl" // Vulkan pre-compiled glsl allows include statements!
 
 const uint LIGHTS = 8;
-
+const uint TEXTURE_ARRAY_SIZE = 8096;
 //enums
 const uint BLINN_PHONG     = 0;
 const uint NORMAL_MAP      = 1;
@@ -35,7 +35,7 @@ layout(binding = 2) uniform AnimShadeData {
     uint textureIndex;
 } uAnimShade;
 
-layout(binding = 3) uniform sampler2D texSampler[16];
+layout(binding = 3) uniform sampler2D texSampler[TEXTURE_ARRAY_SIZE];
 
 
 void main(){

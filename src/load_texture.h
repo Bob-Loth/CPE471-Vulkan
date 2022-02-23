@@ -54,13 +54,13 @@ public:
 	TextureLoader();
 	~TextureLoader();
 	
-
+	static const int TEXTURE_ARRAY_SIZE = 8096;
 	//given a textureName mnemonic, and a path to an image file, constructs a VkImage, allocates device memory and staging buffer memory.
 	void createTexture(std::string imagePath);
 	
 	
 	const Texture* getTexture(uint32_t index) const;
-	std::array<VkDescriptorImageInfo, 16> getDescriptorImageInfos();
+	std::array<VkDescriptorImageInfo, TEXTURE_ARRAY_SIZE> getDescriptorImageInfos();
 	std::vector<VkDescriptorSetLayoutBinding> getDescriptorSetLayoutBindings(int bindingNum) const; 
 	void createDebugTexture();
 	void setup(VkCommandPool commandPool);
