@@ -1,6 +1,6 @@
 # CPE471-VulkanBase-ObjLoading
 
-## Cheatsheet (#version d22ed31)
+## Cheatsheet (#version 29e0995)
 
 Take a look at main.cc::AnimShadeData initializations, possibly change default to not be so dark on textured objects.
 
@@ -14,6 +14,7 @@ main.cc::initGeometry
 
 VulkanGraphicsApp::initTextures
 	Currently using texture arrays, with 16 as the current maximum. If more are desired, or if this does not run on certain hardware, I’ll need to query what features the device supports, and provide a fallback implementation. From what I’ve read, some mobile devices do not support texture arrays, but their usage is widely implemented in modern desktop and laptop processors, with most devices supporting arrays of at least size 80. 
-	Current state of the code, that will need to be changed to not break on specifying no textures, and to be more zero-indexing friendly, is that the texture created in the zeroth position of textureLoader serves as a fallback texture, where any object not explicitly given a texture index will use this texture. See current implementation of TextureLoader::getDescriptorImageInfos.
+	The texture created in the zeroth position of textureLoader serves as a fallback texture, where any object not explicitly given a texture index will use this texture.
+	Textures created by the programmer will be stored in indexes 1-15, and addressed from 0-14, to prevent unintended access to the debug texture. There is also an exception that is thrown if the programmer tries allotting more than TEXTURE_ARRAY_SIZE - 1 textures. See current implementation of TextureLoader::getDescriptorImageInfos.
 
 	
