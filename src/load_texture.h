@@ -54,7 +54,7 @@ public:
 	TextureLoader();
 	~TextureLoader();
 	
-	static const int TEXTURE_ARRAY_SIZE = 128;
+	static const int TEXTURE_ARRAY_SIZE = 16;
 	//given a textureName mnemonic, and a path to an image file, constructs a VkImage, allocates device memory and staging buffer memory.
 	void createTexture(std::string imagePath);
 	
