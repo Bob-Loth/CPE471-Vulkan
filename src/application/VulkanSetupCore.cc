@@ -72,11 +72,15 @@ std::vector<std::string> VulkanSetupCore::gatherDeviceExtensions(){
     const std::vector<std::string>& selfRequested = getRequestedDeviceExtensions();
     std::set<std::string> required(selfRequired.begin(), selfRequired.end());
     std::set<std::string> requested(selfRequested.begin(), selfRequested.end());
-#ifdef __arm64__
-    requested.emplace("VK_KHR_portability_subset");
-#endif // __arm__
 
-    
+    //vulkan spec requires usage of portability subset if it is available
+    std::string portability = "VK_KHR_portability_subset";
+    for (auto extension : mDeviceBundle.physicalDevice.mAvailableExtensions){
+        if(portability.compare(std::string(extension.extensionName)) == 0){
+            required.insert(portability);
+            break;
+        }
+    }
     
     
     for(const VulkanProviderInterface* dependent : _mDependentProviders){
