@@ -403,7 +403,7 @@ void Application::initGeometry(){
     mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
     mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
 
-    mObjects["test"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/Cube.gltf");
+    mObjects["test"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf");
 
     // Create new uniform data for each object
     mObjectTransforms["vulkan"] = UniformTransformData::create();

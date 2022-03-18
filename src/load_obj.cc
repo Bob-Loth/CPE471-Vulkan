@@ -12,26 +12,7 @@
 static void process_obj_contents(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, const std::vector<tinyobj::material_t>& materials, ObjMultiShapeGeometry& ivGeoOut);
 
 /// TinyObj index type that can be used in a hash table. 
-struct index_t : public tinyobj::index_t{
-    index_t() = default;
-    index_t(const tinyobj::index_t& aOther) : tinyobj::index_t(aOther) {}
 
-    friend bool operator==(const index_t& a, const index_t& b) { return(a.vertex_index == b.vertex_index && a.normal_index == b.normal_index && a.texcoord_index == b.texcoord_index); }
-    friend bool operator!=(const index_t& a, const index_t& b) { return(!operator==(a,b)); }
-};
-
-template<>
-struct std::hash<index_t>{
-    size_t operator()(const index_t& aIndexBundle) const noexcept{
-        return(
-            ((std::hash<int>()(aIndexBundle.vertex_index)
-            ^
-            (std::hash<int>()(aIndexBundle.normal_index) << 1)) >> 1)
-            ^
-            (std::hash<int>()(aIndexBundle.texcoord_index) << 1)
-        );
-    }
-};
 
 
 ObjMultiShapeGeometry load_obj_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, const std::string& aObjPath){
@@ -61,22 +42,7 @@ ObjMultiShapeGeometry load_obj_to_vulkan(const VulkanDeviceBundle& aDeviceBundle
     return(ivGeo);
 }
 
-/// glm doesn't support contruction from pointer, so we'll fake it. 
-static glm::vec3 ptr_to_vec3(const float* aData){
-    return(glm::vec3(
-        aData[0],
-        aData[1],
-        aData[2]
-    ));
-}
 
-/// glm doesn't support contruction from pointer, so we'll fake it. 
-static glm::vec2 ptr_to_vec2(const float* aData){
-    return(glm::vec2(
-        aData[0],
-        aData[1]
-    ));
-}
 
 static void process_obj_contents(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, const std::vector<tinyobj::material_t>& materials, ObjMultiShapeGeometry& ivGeoOut){
     // Verify assumptions about obj data
