@@ -6,6 +6,7 @@
 #include "data/VertexInput.h"
 #include "utils/BufferedTimer.h"
 #include "load_obj.h"
+#include "load_gltf.h"
 #include "load_texture.h"
 
 #include <iostream>
@@ -401,6 +402,8 @@ void Application::initGeometry(){
     mObjects["bunny"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/bunny.obj");
     mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
     mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
+
+    mObjects["test"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/Cube.gltf");
 
     // Create new uniform data for each object
     mObjectTransforms["vulkan"] = UniformTransformData::create();
