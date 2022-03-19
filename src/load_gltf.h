@@ -6,6 +6,10 @@
 #include "geometry.h"
 #include "tiny_gltf.h"
 
+enum e_ACCESSOR_TYPE
+{
+    VERTEX, NORMAL, TEXTURE
+};
 
 ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename);
 void process_gltf_contents(tinygltf::Model& model, ObjMultiShapeGeometry& ivGeoOut);
