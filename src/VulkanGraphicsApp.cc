@@ -42,6 +42,7 @@ void VulkanGraphicsApp::initTextures() {
     textureLoader.createTexture(STRIFY(ASSET_DIR) "/ballTex.png");
     textureLoader.createTexture(STRIFY(ASSET_DIR) "crate.jpg");
     textureLoader.createTexture(STRIFY(ASSET_DIR) "flower.jpg");
+    textureLoader.createTexture(STRIFY(ASSET_DIR) "gltfOverview-2.0.0b.png"); 
 }
 
 const VkExtent2D& VulkanGraphicsApp::getFramebufferSize() const{
@@ -322,9 +323,9 @@ void VulkanGraphicsApp::initCommands(){
         if(vkBeginCommandBuffer(mCommandBuffers[i], &beginInfo) != VK_SUCCESS){
             throw std::runtime_error("Failed to begin command recording!");
         }
-
+        //the background
         std::array<VkClearValue, 2> clearValues;
-        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[0].color = {{0.7f, 0.7f, 0.7f, 1.0f}};
         clearValues[1].depthStencil = {1.0f, 0};
 
         VkRenderPassBeginInfo renderBegin;{
