@@ -9,7 +9,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
 
-static void process_obj_contents(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, const std::vector<tinyobj::material_t>& materials, ObjMultiShapeGeometry& ivGeoOut);
+static void process_obj_contents(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, ObjMultiShapeGeometry& ivGeoOut);
 
 /// TinyObj index type that can be used in a hash table. 
 
@@ -37,14 +37,14 @@ ObjMultiShapeGeometry load_obj_to_vulkan(const VulkanDeviceBundle& aDeviceBundle
     }
 
     ObjMultiShapeGeometry ivGeo(aDeviceBundle);
-    process_obj_contents(attributes, shapes, materials, ivGeo);
+    process_obj_contents(attributes, shapes, ivGeo);
 
     return(ivGeo);
 }
 
 
 
-static void process_obj_contents(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, const std::vector<tinyobj::material_t>& materials, ObjMultiShapeGeometry& ivGeoOut){
+static void process_obj_contents(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes,  ObjMultiShapeGeometry& ivGeoOut){
     // Verify assumptions about obj data
     assert(sizeof(tinyobj::real_t) == sizeof(float));
     assert(attributes.vertices.size() % 3 == 0);

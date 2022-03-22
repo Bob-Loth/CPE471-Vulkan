@@ -152,9 +152,9 @@ void TextureLoader::createTexture(string imagePath){
     stbi_image_free(pixels);
 
     textures.back().createImage(deviceBundle);
-    transitionImageLayout(textures.back().image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    transitionImageLayout(textures.back().image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         copyBufferToImage(textures.back().stagingBuffer, textures.back().image, static_cast<uint32_t>(textures.back().width), static_cast<uint32_t>(textures.back().height));
-    transitionImageLayout(textures.back().image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    transitionImageLayout(textures.back().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vkDestroyBuffer(deviceBundle.logicalDevice.handle(), textures.back().stagingBuffer, nullptr);
     vkFreeMemory(deviceBundle.logicalDevice.handle(), textures.back().stagingBufferMemory, nullptr);
@@ -198,9 +198,9 @@ void TextureLoader::createDebugTexture() {
     stbi_image_free(pixels);
 
     textures.back().createImage(deviceBundle);
-    transitionImageLayout(textures.back().image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    transitionImageLayout(textures.back().image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copyBufferToImage(textures.back().stagingBuffer, textures.back().image, static_cast<uint32_t>(textures.back().width), static_cast<uint32_t>(textures.back().height));
-    transitionImageLayout(textures.back().image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    transitionImageLayout(textures.back().image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vkDestroyBuffer(deviceBundle.logicalDevice.handle(), textures.back().stagingBuffer, nullptr);
     vkFreeMemory(deviceBundle.logicalDevice.handle(), textures.back().stagingBufferMemory, nullptr);
@@ -357,7 +357,7 @@ void TextureLoader::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t w
     endSingleTimeCommands(commandBuffer);
 }
 
-void TextureLoader::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout){
+void TextureLoader::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout){
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
     
     VkImageMemoryBarrier barrier{};

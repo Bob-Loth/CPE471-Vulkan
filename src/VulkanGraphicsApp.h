@@ -76,7 +76,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     void initUniformDescriptorPool();
     void allocateDescriptorSets();
     void writeDescriptorSets();
-    void updateDescriptorSets(uint32_t objIdx);
+    void updateDescriptorSets();
     void reinitUniformResources();
 
     size_t mFrameNumber = 0;

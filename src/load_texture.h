@@ -87,7 +87,7 @@ private:
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	//consider learning about and using vkutils::QueueClosure();
-	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+	void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
 	
 };
 

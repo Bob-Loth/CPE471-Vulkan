@@ -29,7 +29,7 @@ struct std::hash<index_t> {
     }
 };
 
-/// glm doesn't support contruction from pointer, so we'll fake it. 
+/// glm doesn't support contruction from pointer, so we'll fake it.
 static glm::vec3 ptr_to_vec3(const float* aData) {
     return(glm::vec3(
         aData[0],

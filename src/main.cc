@@ -230,7 +230,7 @@ void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int ac
 }
 
 
-int main(int argc, char** argv){
+int main(){
     Application app;
     app.init();
     app.run();
