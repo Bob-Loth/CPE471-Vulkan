@@ -82,7 +82,6 @@ std::vector<std::string> VulkanSetupCore::gatherDeviceExtensions(){
         }
     }
     
-    
     for(const VulkanProviderInterface* dependent : _mDependentProviders){
         const std::vector<std::string>& dRequested = dependent->getRequestedDeviceExtensions();
         const std::vector<std::string>& dRequired = dependent->getRequiredDeviceExtensions();

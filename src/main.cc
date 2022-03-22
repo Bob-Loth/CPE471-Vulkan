@@ -350,6 +350,7 @@ void Application::render(double dt){
     static UniformTransformDataPtr teapotTfs = mObjectTransforms["teapot"];
     static UniformTransformDataPtr ballTfs = mObjectTransforms["ballTex"];
     static UniformTransformDataPtr cubeTfs = mObjectTransforms["cube"];
+    static UniformTransformDataPtr lanternTfs = mObjectTransforms["lantern"];
     // Global time
     float gt = static_cast<float>(glfwGetTime());
     
@@ -361,6 +362,9 @@ void Application::render(double dt){
 
     // Spin the cube around above both the logo and the ball.
     cubeTfs->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
+
+    // move the lantern into the background
+    lanternTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -5.0));
 
     // Rotate all other objects around the Vulkan logo in the center
     constexpr float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
@@ -407,6 +411,8 @@ void Application::initGeometry(){
     mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
     mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
     mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf");
+    mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf");
+    
 
     // Create new uniform data for each object
     mObjectTransforms["vulkan"] = UniformTransformData::create();
@@ -415,6 +421,7 @@ void Application::initGeometry(){
     mObjectTransforms["teapot"] = UniformTransformData::create();
     mObjectTransforms["ballTex"] = UniformTransformData::create();
     mObjectTransforms["cube"] = UniformTransformData::create();
+    mObjectTransforms["lantern"] = UniformTransformData::create();
 
     mObjectAnimShade["vulkan"] = UniformAnimShadeData::create();
     mObjectAnimShade["monkey"] = UniformAnimShadeData::create();
@@ -422,7 +429,8 @@ void Application::initGeometry(){
     mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
     mObjectAnimShade["ballTex"] = UniformAnimShadeData::create();
     mObjectAnimShade["cube"] = UniformAnimShadeData::create();
-    
+    mObjectAnimShade["lantern"] = UniformAnimShadeData::create();
+
     //Make a color map
     auto BlPhColors = unordered_map<string, AnimShadeData>();
     initBlinnPhongColorMap(&BlPhColors);
@@ -433,7 +441,8 @@ void Application::initGeometry(){
     mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
     mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
     mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
-    
+    mObjectAnimShade["cube"]->setStruct(BlPhColors["purple"]);
+
     //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
     recordShadingLayers();
     // Add object to the scene along with its uniform data
@@ -454,6 +463,7 @@ void Application::initGeometry(){
     VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}});
     VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]}});
     VulkanGraphicsApp::addMultiShapeObject(mObjects["cube"], { {1, mObjectTransforms["cube"]}, {2, mObjectAnimShade["cube"]} });
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["lantern"], { {1, mObjectTransforms["lantern"]}, {2, mObjectAnimShade["lantern"]} });
 }
 
 /// Initialize our shaders

@@ -28,8 +28,7 @@ ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundl
 void process_vertices(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices) {
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     assert(accessor.type == TINYGLTF_TYPE_VEC3);
-    assert(accessor.count % 3 == 0);
-
+    
     BufferView bufferView = model.bufferViews[accessor.bufferView];
     int stride = accessor.ByteStride(bufferView);
     size_t offset = accessor.byteOffset + bufferView.byteOffset;
@@ -49,8 +48,7 @@ void process_vertices(const Model& model, const Accessor& accessor, std::vector<
 void process_normals(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices){
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     assert(accessor.type == TINYGLTF_TYPE_VEC3);
-    assert(accessor.count % 3 == 0);
-
+    
     BufferView bufferView = model.bufferViews[accessor.bufferView];
     int stride = accessor.ByteStride(bufferView);
     size_t offset = accessor.byteOffset + bufferView.byteOffset;
@@ -71,8 +69,7 @@ void process_normals(const Model& model, const Accessor& accessor, std::vector<O
 void process_texcoords(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices){
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     assert(accessor.type == TINYGLTF_TYPE_VEC2);
-    assert(accessor.count % 2 == 0);
-
+    
     BufferView bufferView = model.bufferViews[accessor.bufferView];
     int stride = accessor.ByteStride(bufferView);
     size_t offset = accessor.byteOffset + bufferView.byteOffset;
@@ -93,9 +90,7 @@ void process_texcoords(const Model& model, const Accessor& accessor, std::vector
 void process_indices(const Model& model, const Accessor& accessor, std::vector<ObjMultiShapeGeometry::index_t>& outputIndices) {
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT);
     assert(accessor.type == TINYGLTF_TYPE_SCALAR);
-    assert(accessor.count % 3 == 0);
-
-
+    
     BufferView bufferView = model.bufferViews[accessor.bufferView];
     int stride = accessor.ByteStride(bufferView);
     size_t offset = accessor.byteOffset + bufferView.byteOffset;
