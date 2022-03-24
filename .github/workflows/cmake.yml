@@ -31,7 +31,7 @@ jobs:
         # silence GitHub Annotation notice displayed if resolving `latest` into Vulkan SDK release number
         quiet: true
     - name: install glfw
-      run: sudo apt-get install libglfw3 sudo apt-get install libglfw3-dev
+      run: sudo apt-get install libglfw3 libglfw3-dev
       
     - name: install glm
       run: sudo apt install libglm-dev
