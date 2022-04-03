@@ -220,7 +220,12 @@ void Application::updateView(){
     assert(mWorldInfo != nullptr);
 
     //TODO remove or simplify for assignment
-    mWorldInfo->getStruct().View = glm::make_mat4(createTranslateMat(0, 0, -5).data());
+    auto Translate = createTranslateMat(0, 0, 5);
+    auto Rotate = createRotationMatY(glm::pi<float>() / 6.0);
+    auto View = multMat(Translate, Rotate);
+    mWorldInfo->getStruct().View = glm::lookAt(glm::vec3(0.0, 0.0, 5), glm::vec3(0.0, 0.0, -5), glm::vec3(0.0, 1.0, 0.0));//glm::make_mat4(View.data());
+
+    
 }
 
 /// Update perspective matrix
@@ -247,10 +252,15 @@ void Application::render(double dt){
     // Get pointers to the individual transforms for each object in the scene
     static vector<UniformTransformDataPtr> cubeTfs = { mObjectTransforms["cube0"], mObjectTransforms["cube1"], mObjectTransforms["cube2"], mObjectTransforms["cube3"] };
     
-    cubeTfs[0]->getStruct().Model = glm::translate(vec3(-5.0, 0.0, 0.0));
-    cubeTfs[1]->getStruct().Model = glm::translate(vec3(0.0, 0.0, 0.0));
-    cubeTfs[2]->getStruct().Model = glm::translate(vec3(5.0, 0.0, 0.0));
-    cubeTfs[3]->getStruct().Model = glm::translate(vec3(10.0, 0.0, 0.0));
+    auto cube0 = multMat(createScaleMat(0.4, 1.6, 0.4),createTranslateMat(2, 1, 0) );
+    auto cube1 = cube0;
+    auto cube2 = cube0;
+    auto cube3 = cube0;
+
+    cubeTfs[0]->getStruct().Model = glm::make_mat4(cube0.data());
+    cubeTfs[1]->getStruct().Model = glm::make_mat4(cube1.data());
+    cubeTfs[2]->getStruct().Model = glm::make_mat4(cube2.data());
+    cubeTfs[3]->getStruct().Model = glm::make_mat4(cube3.data());
 
     // Tell the GPU to render a frame. 
     VulkanGraphicsApp::render();
