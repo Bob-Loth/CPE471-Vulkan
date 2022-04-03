@@ -19,6 +19,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 using namespace std;
 enum ShadingLayer { BLINN_PHONG, NORMAL_MAP, TEXTURE_MAP, TEXTURED_FLAT, TEXTURED_SHADED, NO_FORCED_LAYER };
@@ -33,16 +34,6 @@ ShadingLayer currentShadingLayer = NO_FORCED_LAYER; /*static initialization prob
 struct WorldInfo {
     alignas(16) glm::mat4 View;
     alignas(16) glm::mat4 Perspective;
-    glm::vec4 lightPosition[8] = {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(1.0f, 1.0f, -1.0f, 1.0f),
-        glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f),
-        glm::vec4(1.0f, -1.0f, 1.0f, 1.0f),
-        glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),
-        glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),
-        glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f)
-    };
 };
 
 // Model transform matrix which will be different for each object / draw call.
@@ -272,8 +263,7 @@ void Application::run(){
         glfwPollEvents();
         //set shading layers based on polled events
         observeCurrentShadingLayer();
-        // Update view matrix
-        updateView();
+        
 
         // Render the frame 
         globalRenderTimer.frameStart();
@@ -292,34 +282,20 @@ void Application::run(){
     vkDeviceWaitIdle(VulkanGraphicsApp::getPrimaryDeviceBundle().logicalDevice.handle());
 }
 
+
 /// Update view matrix from orbit camera controls 
 void Application::updateView(){
-    const float xSensitivity = 1.0f/glm::pi<float>();
-    const float ySensitivity = xSensitivity;
-    const float thetaLimit = glm::radians(89.99f);
-    static glm::dvec2 lastPos = glm::dvec2(std::numeric_limits<double>::quiet_NaN());
-
-    glm::dvec2 pos;
-    glfwGetCursorPos(getWindowPtr(), &pos.x, &pos.y);
-    glm::vec2 delta = pos - lastPos;
-
-    // If this is the first frame, set delta to zero. 
-    if(glm::isnan(lastPos.x)){
-        delta = glm::vec2(0.0);
-    }
-
-    lastPos = pos;
-
-    static float theta, phi;
-
-    phi += glm::radians(delta.x * xSensitivity);
-    theta = glm::clamp(theta + glm::radians(delta.y*ySensitivity), -thetaLimit, thetaLimit);
-
+    
     assert(mWorldInfo != nullptr);
 
-    glm::vec3 eye = smViewZoom*glm::normalize(glm::vec3(cos(phi)*cos(theta), sin(theta), sin(phi)*cos(theta)));
-    glm::vec3 look = glm::vec3(0.0);
-    mWorldInfo->getStruct().View = glm::lookAt(eye, look, glm::vec3(0.0, 1.0, 0.0));
+    
+    
+    
+    mWorldInfo->getStruct().View = glm::lookAt(glm::vec3(0, 0, 5), glm::vec3(0,0,0), glm::vec3(0.0, 1.0, 0.0));
+    float* mnew = glm::value_ptr(mWorldInfo->getStruct().View);
+    for (int i = 0; i < 16; ++i) {
+        cout << mnew[i] << " ";
+    }
 }
 
 /// Update perspective matrix
@@ -344,148 +320,32 @@ void Application::render(double dt){
     using glm::vec3;
 
     // Get pointers to the individual transforms for each object in the scene
-    /*
-    static UniformTransformDataPtr logoTfs = mObjectTransforms["vulkan"];
-    static UniformTransformDataPtr monkeyTfs = mObjectTransforms["monkey"];
-    static UniformTransformDataPtr bunnyTfs = mObjectTransforms["bunny"];
-    static UniformTransformDataPtr teapotTfs = mObjectTransforms["teapot"];
-    static UniformTransformDataPtr ballTfs = mObjectTransforms["ballTex"];
-    static UniformTransformDataPtr cubeTfs = mObjectTransforms["cube"];
-    */
-    static UniformTransformDataPtr lanternTfs = mObjectTransforms["lantern"];
-    static UniformTransformDataPtr dummyTfs = mObjectTransforms["dummy"];
-    // Global time
-    float gt = static_cast<float>(glfwGetTime());
-    /*
-    // Spin the logo in place. 
-    logoTfs->getStruct().Model = glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0));
+    static vector<UniformTransformDataPtr> cubeTfs = { mObjectTransforms["cube0"], mObjectTransforms["cube1"], mObjectTransforms["cube2"], mObjectTransforms["cube3"] };
     
-    // Spin the ball opposite direction of logo, above it.
-    ballTfs->getStruct().Model = glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
+    cubeTfs[0]->getStruct().Model = glm::translate(vec3(-5.0, 0.0, 0.0));
+    cubeTfs[1]->getStruct().Model = glm::translate(vec3(0.0, 0.0, 0.0));
+    cubeTfs[2]->getStruct().Model = glm::translate(vec3(5.0, 0.0, 0.0));
+    cubeTfs[3]->getStruct().Model = glm::translate(vec3(10.0, 0.0, 0.0));
 
-    // Spin the cube around above both the logo and the ball.
-    cubeTfs->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
-    */
-    // move the lantern into the background
-    lanternTfs->getStruct().Model = glm::translate(vec3(0.0, 2.5, -2.0)) * glm::scale(vec3(0.2));
-
-    //position dummy
-    dummyTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>()/2, vec3(-1.0, 0.0, 0.0)) * glm::scale(vec3(1.0/25));
-
-    // Rotate all other objects around the Vulkan logo in the center
-    constexpr float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
-    float radius = 4.5f;
-    /*
-    monkeyTfs->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*0), .2f*sin(gt*4.0f+angle*0), sin(angle*0))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
-    bunnyTfs->getStruct().Model  = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*1), .2f*sin(gt*4.0f+angle*1), sin(angle*1))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
-    teapotTfs->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*2), .2f*sin(gt*4.0f+angle*2), sin(angle*2))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
-    */
     // Tell the GPU to render a frame. 
     VulkanGraphicsApp::render();
 } 
 
 
-void initBlinnPhongColorMap(unordered_map<string, AnimShadeData> *map) {
-    (*map)["cyan"] = AnimShadeData(
-        glm::vec4(0.0, 1.0, 1.0, 1.0),
-        glm::vec4(0.05, 0.05, 0.05, 1.0),
-        glm::vec4(0.5, 0.5, 0.5, 1.0),
-        100.0f,
-        false
-    );
-    (*map)["red"] = AnimShadeData(
-        glm::vec4(1.0, 0.0, 0.0, 1.0),
-        glm::vec4(0.05, 0.05, 0.05, 1.0),
-        glm::vec4(0.5, 0.5, 0.5, 1.0),
-        100.0f,
-        false
-    );
-    //example of setting diffuse and shininess only
-    (*map)["purple"] = AnimShadeData(
-        glm::vec4(0.5, 0.1, 0.7, 1.0),
-        50.0f,
-        false
-    );
-    //example of default initialization
-    (*map)["white"] = AnimShadeData();
-}
-
 void Application::initGeometry(){
-    // Load obj files 
-    /*
-    mObjects["vulkan"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/vulkan.obj");
-    mObjects["monkey"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/suzanne.obj");
-    mObjects["bunny"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/bunny.obj");
-    mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
-    mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
-    mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf");
-    */
-    mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf");
-    mObjects["dummy"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/dummy.obj");
-    
-
-    // Create new uniform data for each object
-    /*
-    mObjectTransforms["vulkan"] = UniformTransformData::create();
-    mObjectTransforms["monkey"] = UniformTransformData::create();
-    mObjectTransforms["bunny"] = UniformTransformData::create();
-    mObjectTransforms["teapot"] = UniformTransformData::create();
-    mObjectTransforms["ballTex"] = UniformTransformData::create();
-    mObjectTransforms["cube"] = UniformTransformData::create();
-    */
-    mObjectTransforms["lantern"] = UniformTransformData::create();
-    mObjectTransforms["dummy"] = UniformTransformData::create();
-    /*
-    mObjectAnimShade["vulkan"] = UniformAnimShadeData::create();
-    mObjectAnimShade["monkey"] = UniformAnimShadeData::create();
-    mObjectAnimShade["bunny"] = UniformAnimShadeData::create();
-    mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
-    mObjectAnimShade["ballTex"] = UniformAnimShadeData::create();
-    mObjectAnimShade["cube"] = UniformAnimShadeData::create();
-    */
-    mObjectAnimShade["lantern"] = UniformAnimShadeData::create();
-    mObjectAnimShade["dummy"] = UniformAnimShadeData::create();
-
-    //Make a color map
-    auto BlPhColors = unordered_map<string, AnimShadeData>();
-    initBlinnPhongColorMap(&BlPhColors);
-
-    //set uniform shading data to colors defined in color map
-    /*
-    mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
-    mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
-    mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
-    mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
-    mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
-    */
-    mObjectAnimShade["lantern"]->setStruct(BlPhColors["purple"]);
-    mObjectAnimShade["dummy"]->setStruct(BlPhColors["purple"]);
+    //non-instanced for now, as the geometry and number of instances are both small
+    for (int i = 0; i < 4; ++i) {
+        mObjects["cube" + to_string(i)] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf");
+        mObjectTransforms["cube" + to_string(i)] = UniformTransformData::create();
+        mObjectAnimShade["cube" + to_string(i)] = UniformAnimShadeData::create();
+        mObjectAnimShade["cube" + to_string(i)]->setStruct(AnimShadeData());
+    }
 
     //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
     recordShadingLayers();
-    // Add object to the scene along with its uniform data
-    /*
-    VulkanGraphicsApp::addMultiShapeObject(
-        mObjects["vulkan"], // The object
-
-        // Collection of uniform data for the object
-        {
-            {1, mObjectTransforms["vulkan"]}, // Bind transform matrix to binding point #1
-            {2, mObjectAnimShade["vulkan"]}, // Bind other uniform data to binding point #2
-        }
-        
-    );
-    */
-    // Add the other objects the same way as above. 
-    /*
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["monkey"], {{1, mObjectTransforms["monkey"]}, {2, mObjectAnimShade["monkey"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["bunny"], {{1, mObjectTransforms["bunny"]}, {2, mObjectAnimShade["bunny"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["cube"], { {1, mObjectTransforms["cube"]}, {2, mObjectAnimShade["cube"]} });
-    */
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["lantern"], { {1, mObjectTransforms["lantern"]}, {2, mObjectAnimShade["lantern"]} });
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["dummy"], { {1, mObjectTransforms["dummy"]}, {2, mObjectAnimShade["dummy"]} });
+    for (int i = 0; i < 4; ++i) {
+        VulkanGraphicsApp::addMultiShapeObject(mObjects["cube" + to_string(i)], { {1, mObjectTransforms["cube" + to_string(i)]}, {2, mObjectAnimShade["cube" + to_string(i)]} });
+    }
 }
 
 /// Initialize our shaders
