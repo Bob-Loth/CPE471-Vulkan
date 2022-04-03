@@ -21,10 +21,8 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "matrixMath.h"
 using namespace std;
-enum ShadingLayer { BLINN_PHONG, NORMAL_MAP, TEXTURE_MAP, TEXTURED_FLAT, TEXTURED_SHADED, NO_FORCED_LAYER };
-ShadingLayer currentShadingLayer = NO_FORCED_LAYER; /*static initialization problem generates linker error, using global for now*/
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // The code below defines the types and formatting for uniform data used in our shaders. 
@@ -43,23 +41,7 @@ struct Transforms {
 
 // Additional uniform data that varies per-object / per-draw.
 struct AnimShadeData {
-    glm::vec4 diffuseData = glm::vec4(1.0f);
-    glm::vec4 ambientData = glm::vec4(0.1f, 0.1f, 0.1f, 0.0f);
-    glm::vec4 specularData = glm::vec4(1.0f);
-    float shininess = 300.0f;
-    uint32_t shadingLayer = 0;
-    uint32_t textureIndex = -1; //debug texture
-    //default steely material
-    AnimShadeData() {};
-    //textures only
-    AnimShadeData(uint32_t mode, uint32_t texIdx) : shadingLayer(mode), textureIndex(texIdx) {}
-    //Use to edit diffuse and shininess only
-    AnimShadeData(glm::vec4 dif, float shn, uint32_t mode) :
-        diffuseData(dif), shininess(shn), shadingLayer(mode) {}
-    //Use to fully control material properties
-    AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn, uint32_t mode) :
-        diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn), shadingLayer(mode) {}
-
+    int unused;
 };
 
 
@@ -106,10 +88,6 @@ class Application : public VulkanGraphicsApp
     std::unordered_map<std::string, UniformTransformDataPtr> mObjectTransforms;
     /// Collection of extra per-object data. Contains an entry for each object in mObjects.
     std::unordered_map<std::string, UniformAnimShadeDataPtr> mObjectAnimShade;
-    //holds the original state of each of the object's shading layer
-    std::unordered_map<std::string, ShadingLayer> mKeyCallbackHolds;
-    
-    
     
     /// An wrapped instance of struct WorldInfo made available automatically as uniform data in our shaders.
     UniformWorldInfoPtr mWorldInfo = nullptr;
@@ -132,22 +110,7 @@ void Application::scrollCallback(GLFWwindow* aWindow, double aXOffset, double aY
     smViewZoom = glm::clamp(smViewZoom + float(-aYOffset)*scrollSensitivity, 2.0f, 30.0f);
 }
 
-void Application::recordShadingLayers() {
-    for (auto& obj : mObjectAnimShade) {
-        mKeyCallbackHolds[obj.first] = static_cast<ShadingLayer>(obj.second->getStruct().shadingLayer);
-    }
-}
 
-void Application::observeCurrentShadingLayer() {
-    for (auto& obj : mObjectAnimShade) {
-        if (currentShadingLayer == NO_FORCED_LAYER) { //revert to each object's original layer
-            obj.second->getStruct().shadingLayer = mKeyCallbackHolds[obj.first];
-        }
-        else { //observe and apply the current shading layer to all objects
-            obj.second->getStruct().shadingLayer = currentShadingLayer;
-        }
-    }
-}
 
 /** Keyboard callback:
  *    G: Toggle cursor grabbing. A grabbed cursor makes controlling the view easier.
@@ -164,36 +127,7 @@ void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int ac
         }
     }
     //modes start. They are the corresponding enum values, shifted up 1 for use on a keyboard.
-    else if (key == GLFW_KEY_1 && action == GLFW_PRESS){ 
-        currentShadingLayer = BLINN_PHONG;
-    }
-    else if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
-        currentShadingLayer = NO_FORCED_LAYER;
-    }
-    else if (key == GLFW_KEY_2 && action == GLFW_PRESS){
-        currentShadingLayer = NORMAL_MAP;
-    }
-    else if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
-        currentShadingLayer = NO_FORCED_LAYER;
-    }
-    else if (key == GLFW_KEY_3 && action == GLFW_PRESS){
-        currentShadingLayer = TEXTURE_MAP;
-    }
-    else if (key == GLFW_KEY_3 && action == GLFW_RELEASE) {
-        currentShadingLayer = NO_FORCED_LAYER;
-    }
-    else if (key == GLFW_KEY_4 && action == GLFW_PRESS){
-        currentShadingLayer = TEXTURED_FLAT;
-    }
-    else if (key == GLFW_KEY_4 && action == GLFW_RELEASE) {
-        currentShadingLayer = NO_FORCED_LAYER;
-    }
-    else if (key == GLFW_KEY_5 && action == GLFW_PRESS){
-        currentShadingLayer = TEXTURED_SHADED;
-    }
-    else if (key == GLFW_KEY_5 && action == GLFW_RELEASE){
-        currentShadingLayer = NO_FORCED_LAYER;
-    }
+    
     //modes end
     else if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(aWindow, GLFW_TRUE);
@@ -261,10 +195,7 @@ void Application::run(){
     while(!glfwWindowShouldClose(window)){
         // Poll for window events, keyboard and mouse button presses, ect...
         glfwPollEvents();
-        //set shading layers based on polled events
-        observeCurrentShadingLayer();
         
-
         // Render the frame 
         globalRenderTimer.frameStart();
         render(globalRenderTimer.lastStepTime()*1e-6);
@@ -288,14 +219,8 @@ void Application::updateView(){
     
     assert(mWorldInfo != nullptr);
 
-    
-    
-    
-    mWorldInfo->getStruct().View = glm::lookAt(glm::vec3(0, 0, 5), glm::vec3(0,0,0), glm::vec3(0.0, 1.0, 0.0));
-    float* mnew = glm::value_ptr(mWorldInfo->getStruct().View);
-    for (int i = 0; i < 16; ++i) {
-        cout << mnew[i] << " ";
-    }
+    //TODO remove or simplify for assignment
+    mWorldInfo->getStruct().View = glm::make_mat4(createTranslateMat(0, 0, -5).data());
 }
 
 /// Update perspective matrix
@@ -341,8 +266,6 @@ void Application::initGeometry(){
         mObjectAnimShade["cube" + to_string(i)]->setStruct(AnimShadeData());
     }
 
-    //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
-    recordShadingLayers();
     for (int i = 0; i < 4; ++i) {
         VulkanGraphicsApp::addMultiShapeObject(mObjects["cube" + to_string(i)], { {1, mObjectTransforms["cube" + to_string(i)]}, {2, mObjectAnimShade["cube" + to_string(i)]} });
     }
