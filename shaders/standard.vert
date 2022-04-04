@@ -7,8 +7,8 @@ layout(location = 0) out vec3 W_fragNor;
 layout(location = 1) out vec4 W_fragPos;
 
 layout(binding = 0) uniform WorldInfo {
-    mat4 V;
-    mat4 P;
+    mat4 View;
+    mat4 Projection;
 } uWorld;
 
 layout(binding = 1) uniform Transform{
@@ -19,5 +19,5 @@ void main(){
     W_fragPos = uModel.Model * vertPos; // Fragment position in world space
     W_fragNor = mat3(uModel.Model) * vertNor.xyz; // Fragment normal in world space
 
-    gl_Position = uWorld.P * uWorld.V * W_fragPos; // p*v*m
+    gl_Position = uWorld.Projection * uWorld.View * W_fragPos; // p*v*m, order matters and is "evaluated" right-to-left
 }

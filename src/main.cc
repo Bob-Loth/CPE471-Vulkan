@@ -220,12 +220,10 @@ void Application::updateView(){
     assert(mWorldInfo != nullptr);
 
     //TODO remove or simplify for assignment
-    auto Translate = createTranslateMat(0, 0, 5);
-    auto Rotate = createRotationMatY(glm::pi<float>() / 6.0);
-    auto View = multMat(Translate, Rotate);
-    mWorldInfo->getStruct().View = glm::lookAt(glm::vec3(0.0, 0.0, 5), glm::vec3(0.0, 0.0, -5), glm::vec3(0.0, 1.0, 0.0));//glm::make_mat4(View.data());
-
-    
+    Matrix Translate = createTranslateMat(-2, 0, 0);
+    Matrix Rotate = createRotationMatY(-glm::pi<float>() / 6.0);
+    Matrix View = multMat(Translate, Rotate);
+    mWorldInfo->getStruct().View = glm::make_mat4(View.data());
 }
 
 /// Update perspective matrix
@@ -249,13 +247,18 @@ void Application::render(double dt){
     using glm::cos;
     using glm::vec3;
 
+    //TODO remove or simplify for assignment
     // Get pointers to the individual transforms for each object in the scene
     static vector<UniformTransformDataPtr> cubeTfs = { mObjectTransforms["cube0"], mObjectTransforms["cube1"], mObjectTransforms["cube2"], mObjectTransforms["cube3"] };
     
-    auto cube0 = multMat(createScaleMat(0.4, 1.6, 0.4),createTranslateMat(2, 1, 0) );
-    auto cube1 = cube0;
-    auto cube2 = cube0;
-    auto cube3 = cube0;
+    Matrix verticalScale1 = createScaleMat(0.2, 1.6, 0.2);
+    Matrix verticalScale2 = createScaleMat(0.2, 0.8, 0.2);
+    Matrix rotation = createRotationMatZ(glm::pi<float>()/2.0);
+
+    Matrix cube0 = multMat(createTranslateMat(2, 0, -5), verticalScale1);
+    Matrix cube1 = multMat(createTranslateMat(0, 0, -5), verticalScale1);
+    Matrix cube2 = multMat(createTranslateMat(-1, 0, -5), verticalScale1);
+    Matrix cube3 = multMat(createTranslateMat(-0.5, 0, -5), multMat(rotation, verticalScale2));
 
     cubeTfs[0]->getStruct().Model = glm::make_mat4(cube0.data());
     cubeTfs[1]->getStruct().Model = glm::make_mat4(cube1.data());

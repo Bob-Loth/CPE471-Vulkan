@@ -37,7 +37,6 @@ public:
 	VkImageView imageView;
 	VkDeviceMemory imageMemory;
 	VkSampler sampler;
-	VmaAllocation allocation;
 	Texture() : device(VK_NULL_HANDLE), stagingBuffer(VK_NULL_HANDLE), stagingBufferMemory(VK_NULL_HANDLE), image(VK_NULL_HANDLE), imageMemory(VK_NULL_HANDLE), imageView(VK_NULL_HANDLE), sampler(VK_NULL_HANDLE) {};
 	Texture(VkDevice device) : device(device), stagingBuffer(VK_NULL_HANDLE), stagingBufferMemory(VK_NULL_HANDLE), image(VK_NULL_HANDLE), imageMemory(VK_NULL_HANDLE), imageView(VK_NULL_HANDLE), sampler(VK_NULL_HANDLE) {};
 	~Texture();
