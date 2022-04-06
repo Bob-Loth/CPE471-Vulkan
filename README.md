@@ -17,4 +17,5 @@ VulkanGraphicsApp::initTextures
 	The texture created in the zeroth position of textureLoader serves as a fallback texture, where any object not explicitly given a texture index will use this texture.
 	Textures created by the programmer will be stored in indexes 1-15, and addressed from 0-14, to prevent unintended access to the debug texture. There is also an exception that is thrown if the programmer tries allotting more than TEXTURE_ARRAY_SIZE - 1 textures. See current implementation of TextureLoader::getDescriptorImageInfos.
 
-	
+Resources for Vulkan middleware
+https://github.com/vinjn/awesome-vulkan
