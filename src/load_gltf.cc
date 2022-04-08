@@ -2,7 +2,25 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "load_gltf.h"
+
 using namespace tinygltf;
+using namespace glm;
+
+
+//to pretty up the CTM transforms
+class NodeData
+{
+public:
+    NodeData(Node node, mat4 CTM) : node(node), CTM(CTM) {};
+    Node getNode() { return node; }
+    mat4 CTM;
+    
+private:
+    Node node;
+};
+
+
+
 ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename) {
     Model model;
     TinyGLTF loader;
@@ -25,7 +43,7 @@ ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundl
     return ivGeo;
 }
 
-void process_vertices(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices) {
+void process_vertices(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices, glm::mat4 CTM) {
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     assert(accessor.type == TINYGLTF_TYPE_VEC3);
     
@@ -41,11 +59,11 @@ void process_vertices(const Model& model, const Accessor& accessor, std::vector<
         //convince the compiler that data points to floating point data.
         float* memoryLocation = reinterpret_cast<float*>(data.data() + offset + (i * static_cast<size_t>(stride)));
         //read in the vec3.
-        objVertices.emplace_back(ObjVertex{ glm::vec3(ptr_to_vec3(memoryLocation)) });
+        objVertices.emplace_back(ObjVertex{CTM * glm::vec4(ptr_to_vec3(memoryLocation), 1.0f) });
     }
 }
 
-void process_normals(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices){
+void process_normals(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices, size_t cumulativeIndexCount){
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     assert(accessor.type == TINYGLTF_TYPE_VEC3);
     
@@ -62,11 +80,11 @@ void process_normals(const Model& model, const Accessor& accessor, std::vector<O
         float* memoryLocation = reinterpret_cast<float*>(data.data() + offset + (i * static_cast<size_t>(stride)));
         //read in the vec3.
         //objVertices.emplace_back(ObjVertex{ glm::vec3(ptr_to_vec3(memoryLocation)) });
-        objVertices.at(i).normal = std::move(ptr_to_vec3(memoryLocation));
+        objVertices.at(i + cumulativeIndexCount).normal = std::move(ptr_to_vec3(memoryLocation));
     }
 }
 
-void process_texcoords(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices){
+void process_texcoords(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices, size_t cumulativeIndexCount){
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     assert(accessor.type == TINYGLTF_TYPE_VEC2);
     
@@ -82,7 +100,7 @@ void process_texcoords(const Model& model, const Accessor& accessor, std::vector
         //convince the compiler that data points to floating point data. Move data ptr forward by stride bytes.
         float* memoryLocation = reinterpret_cast<float*>(data.data() + offset + (i * static_cast<size_t>(stride)));
         //read in the vec2.
-        objVertices.at(i).texCoord = std::move(ptr_to_vec2(memoryLocation));
+        objVertices.at(i + cumulativeIndexCount).texCoord = std::move(ptr_to_vec2(memoryLocation));
     }
 
 }
@@ -107,6 +125,36 @@ void process_indices(const Model& model, const Accessor& accessor, std::vector<O
     }
 
 }
+
+glm::mat4 constructCTM(const tinygltf::Model& model, NodeData& node) {
+    
+    //apply any individual transforms in order.
+    if (node.getNode().translation.size() == 3) {
+        node.CTM = glm::translate(node.CTM, vec3(node.getNode().translation[0], node.getNode().translation[1], node.getNode().translation[2]));
+    }
+    if (node.getNode().rotation.size() == 4) {
+        quat q = quat(node.getNode().rotation[0], node.getNode().rotation[1], node.getNode().rotation[2], node.getNode().rotation[3]);
+        node.CTM *= mat4(q);
+    }
+    if (node.getNode().scale.size() == 3) {
+        node.CTM = glm::scale(node.CTM, vec3(node.getNode().scale[0], node.getNode().scale[1], node.getNode().scale[2]));
+    }
+    //There's also a completed matrix transform option, so if the file has that, override the CTM with this new matrix.
+    if (node.getNode().matrix.size() == 16) {
+        node.CTM = glm::make_mat4x4(node.getNode().matrix.data());
+    }
+    //use recursion to apply the matrix stack concept to this node.getNode()'s children. Not tested currently, as lantern test gltf doesn't have children
+    if (!node.getNode().children.empty()) {
+        for (size_t i = 0; i < node.getNode().children.size(); i++) {
+            //construct a new NodeData that has the child node, and the CTM of the parent
+            NodeData childNode(model.nodes[node.getNode().children[i]], node.CTM);
+            //call this function again.
+            return constructCTM(model, childNode);
+        }
+    }
+    return node.CTM;
+}
+
 //gltf buffers may have many interleaved buffers, and the main objects that
             //define what belongs to what are:
             //Accessors, and Bufferviews
@@ -145,9 +193,13 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
     //To make the format consistent, this adds the previous vertex index number to the shape. 
     //E.g. if shape 0 has 30, shape 1 has 60 indices, then shape 2's indices will start from 90 instead of 0.
     size_t cumulativeIndexCount = 0;
-
-    for (const auto& mesh : model.meshes) {//meshes in scene
-        for (const auto& primitive : mesh.primitives) {//shapes in mesh
+    for (const auto& node : model.nodes) {
+        //construct the CTM from the node's data.
+        glm::mat4 currentTransformMatrix = constructCTM(model, NodeData(node, mat4(1.0f)));
+        if (node.mesh == -1) {
+            continue; //skip this node if it contains no meshes. This should be pretty rare.
+        }
+        for (const auto& primitive : model.meshes[node.mesh].primitives) {//shapes in mesh
             assert(primitive.mode == TINYGLTF_MODE_TRIANGLES); //only work with triangle data for now.
             std::vector<ObjMultiShapeGeometry::index_t> outputIndices;
 
@@ -156,27 +208,27 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
             //assume the gltf files have vertex positions and indices.
             vertexIndex = attrMap["POSITION"];
             Accessor vertAcc = model.accessors[vertexIndex];
-            process_vertices(model, vertAcc, objVertices);
+            cumulativeIndexCount = objVertices.size(); //add in the amount of vertices we added, so the next shape's index starts where we left off.
+            process_vertices(model, vertAcc, objVertices, currentTransformMatrix);
 
             Accessor indexAcc = model.accessors[primitive.indices];
 
-            
+
             process_indices(model, indexAcc, outputIndices, cumulativeIndexCount);
-            //add in the amount of vertices we added, so the next shape's index starts where we left off.
-            cumulativeIndexCount += indexAcc.count;
+            
 
             //optionally find normal data and include it
             if (attrMap.find("NORMAL") != attrMap.end()) {
                 normalIndex = attrMap["NORMAL"];
                 Accessor normAcc = model.accessors[normalIndex];
-                process_normals(model, normAcc, objVertices);
+                process_normals(model, normAcc, objVertices, cumulativeIndexCount);
             }
 
             //optionally find texture data and include it
             if (attrMap.find("TEXCOORD_0") != attrMap.end()) {
                 textureIndex = attrMap["TEXCOORD_0"];
                 Accessor texAcc = model.accessors[textureIndex];
-                process_texcoords(model, texAcc, objVertices);
+                process_texcoords(model, texAcc, objVertices, cumulativeIndexCount);
             }
 
             ivGeoOut.addShape(outputIndices);
