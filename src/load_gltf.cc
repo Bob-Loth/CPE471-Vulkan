@@ -87,7 +87,7 @@ void process_texcoords(const Model& model, const Accessor& accessor, std::vector
 
 }
 
-void process_indices(const Model& model, const Accessor& accessor, std::vector<ObjMultiShapeGeometry::index_t>& outputIndices) {
+void process_indices(const Model& model, const Accessor& accessor, std::vector<ObjMultiShapeGeometry::index_t>& outputIndices, size_t cumulativeIndexCount) {
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT);
     assert(accessor.type == TINYGLTF_TYPE_SCALAR);
     
@@ -103,7 +103,7 @@ void process_indices(const Model& model, const Accessor& accessor, std::vector<O
         //convince the compiler that data points to unsigned short data. Move data ptr forward by stride bytes.
         unsigned short* memoryLocation = reinterpret_cast<unsigned short*>(data.data() + offset + (i * static_cast<size_t>(stride)));
         unsigned short val = *memoryLocation;
-        outputIndices.push_back(val);
+        outputIndices.push_back(val + cumulativeIndexCount);
     }
 
 }
@@ -140,6 +140,12 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
     
     // Loop over shapes in the gltf file
 
+    //the gltf format's individual primitive indices all start from 0. 
+    //This is incompatible with the way the .obj format stores its shape data, where the first index of the next shape starts where the previous shape left off.
+    //To make the format consistent, this adds the previous vertex index number to the shape. 
+    //E.g. if shape 0 has 30, shape 1 has 60 indices, then shape 2's indices will start from 90 instead of 0.
+    size_t cumulativeIndexCount = 0;
+
     for (const auto& mesh : model.meshes) {//meshes in scene
         for (const auto& primitive : mesh.primitives) {//shapes in mesh
             assert(primitive.mode == TINYGLTF_MODE_TRIANGLES); //only work with triangle data for now.
@@ -153,7 +159,11 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
             process_vertices(model, vertAcc, objVertices);
 
             Accessor indexAcc = model.accessors[primitive.indices];
-            process_indices(model, indexAcc, outputIndices);
+
+            
+            process_indices(model, indexAcc, outputIndices, cumulativeIndexCount);
+            //add in the amount of vertices we added, so the next shape's index starts where we left off.
+            cumulativeIndexCount += indexAcc.count;
 
             //optionally find normal data and include it
             if (attrMap.find("NORMAL") != attrMap.end()) {
