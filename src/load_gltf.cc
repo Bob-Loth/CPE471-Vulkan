@@ -6,21 +6,6 @@
 using namespace tinygltf;
 using namespace glm;
 
-
-//to pretty up the CTM transforms
-class NodeData
-{
-public:
-    NodeData(Node node, mat4 CTM) : node(node), CTM(CTM) {};
-    Node getNode() { return node; }
-    mat4 CTM;
-    
-private:
-    Node node;
-};
-
-
-
 ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename) {
     Model model;
     TinyGLTF loader;
@@ -126,8 +111,21 @@ void process_indices(const Model& model, const Accessor& accessor, std::vector<O
 
 }
 
-glm::mat4 constructCTM(const tinygltf::Model& model, NodeData& node) {
-    
+//apply parent's transforms to the children
+mat4 TreeNode::computeCTM(){
+    if (!useEmbeddedTransforms) return mat4(1.0f);
+    mat4 builtCTM = CTM; //the node's CTM will still contain only the node-local transform.
+    TreeNode* currentParent = parent;
+    while (currentParent != nullptr) {
+        builtCTM = currentParent->CTM * builtCTM;
+        currentParent = currentParent->parent;
+    }
+    return builtCTM; 
+}
+
+void SceneGraph::constructCTMTree(const tinygltf::Model& model, Node input, TreeNode* parent) {
+    TreeNode node = TreeNode(input, mat4(1.0f));//initialize a TreeNode with no matrix transforms.
+
     //apply any individual transforms in order.
     if (node.getNode().translation.size() == 3) {
         node.CTM = glm::translate(node.CTM, vec3(node.getNode().translation[0], node.getNode().translation[1], node.getNode().translation[2]));
@@ -144,15 +142,21 @@ glm::mat4 constructCTM(const tinygltf::Model& model, NodeData& node) {
         node.CTM = glm::make_mat4x4(node.getNode().matrix.data());
     }
     //use recursion to apply the matrix stack concept to this node.getNode()'s children. Not tested currently, as lantern test gltf doesn't have children
+    //if the node has children
     if (!node.getNode().children.empty()) {
         for (size_t i = 0; i < node.getNode().children.size(); i++) {
-            //construct a new NodeData that has the child node, and the CTM of the parent
-            NodeData childNode(model.nodes[node.getNode().children[i]], node.CTM);
+            //construct a new TreeNode that has the child node, and the CTM of the parent
+            Node childNode = model.nodes[node.getNode().children[i]];
             //call this function again.
-            return constructCTM(model, childNode);
+            constructCTMTree(model, childNode, &node);
         }
     }
-    return node.CTM;
+    if (parent != nullptr) { //this is a child of some other node.
+        parent->children.push_back(&node);
+    }
+    else { //no parent, this is a root node.
+        sceneGraph.push_back(node);
+    }
 }
 
 //gltf buffers may have many interleaved buffers, and the main objects that
@@ -184,7 +188,11 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
         }
     }
     
-    std::vector<ObjVertex> objVertices;
+    SceneGraph graph;
+    for (const auto& node : model.nodes) {
+        graph.constructCTMTree(model, node, nullptr);
+    }
+    
     
     // Loop over shapes in the gltf file
 
@@ -192,14 +200,15 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
     //This is incompatible with the way the .obj format stores its shape data, where the first index of the next shape starts where the previous shape left off.
     //To make the format consistent, this adds the previous vertex index number to the shape. 
     //E.g. if shape 0 has 30, shape 1 has 60 indices, then shape 2's indices will start from 90 instead of 0.
+    std::vector<ObjVertex> objVertices;
     size_t cumulativeIndexCount = 0;
-    for (const auto& node : model.nodes) {
+    for (TreeNode& treeNode : graph.data()) {
         //construct the CTM from the node's data.
-        glm::mat4 currentTransformMatrix = constructCTM(model, NodeData(node, mat4(1.0f)));
-        if (node.mesh == -1) {
+        glm::mat4 currentTransformMatrix = treeNode.computeCTM();//constructCTM(model, TreeNode(node, mat4(1.0f)));
+        if (treeNode.getNode().mesh == -1) {
             continue; //skip this node if it contains no meshes. This should be pretty rare.
         }
-        for (const auto& primitive : model.meshes[node.mesh].primitives) {//shapes in mesh
+        for (const auto& primitive : model.meshes[treeNode.getNode().mesh].primitives) {//shapes in mesh
             assert(primitive.mode == TINYGLTF_MODE_TRIANGLES); //only work with triangle data for now.
             std::vector<ObjMultiShapeGeometry::index_t> outputIndices;
 
