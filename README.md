@@ -1,6 +1,6 @@
 # CPE471-VulkanBase-ObjLoading
 
-## Cheatsheet (#version 29e0995)
+## Cheatsheet
 
 Take a look at main.cc::AnimShadeData initializations, possibly change default to not be so dark on textured objects.
 
