@@ -19,12 +19,12 @@ VulkanGraphicsApp::initTextures
 
 ### glTF loader features
 the current iteration of the glTF loader supports: 
-	reading glTF nodes, 
-	constructing a tree of nodes,
-	Applying the current node's matrix transforms to current and child nodes,
-	reading in vertex+index data
-	reading in any existing normal data
-	reading in the first set of texture coordinate data (glTF supports multiple texture mappings)
+- reading glTF nodes, 
+- constructing a tree of nodes,
+- Applying the current node's matrix transforms to current and child nodes,
+- reading in vertex+index data
+- reading in any existing normal data
+- reading in the first set of texture coordinate data (glTF supports multiple texture mappings)
 
 
 Resources for Vulkan middleware
