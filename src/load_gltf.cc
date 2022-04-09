@@ -80,12 +80,13 @@ void process_texcoords(const Model& model, const Accessor& accessor, std::vector
     //the buffer itself.
     Buffer buffer = model.buffers[bufferView.buffer];
     auto data = buffer.data; //the vector of bytes. bufferView and accessor will be used to read it.
-
     for (int i = 0; i < accessor.count; i++) {
         //convince the compiler that data points to floating point data. Move data ptr forward by stride bytes.
         float* memoryLocation = reinterpret_cast<float*>(data.data() + offset + (i * static_cast<size_t>(stride)));
         //read in the vec2.
-        objVertices.at(i + cumulativeIndexCount).texCoord = std::move(ptr_to_vec2(memoryLocation));
+        vec2 v = ptr_to_vec2(memoryLocation);
+        v = vec2(v.s, -v.t); //deal with the fact that the obj format's texcoord.t is inverted, and the base code assumes the obj format.
+        objVertices.at(i + cumulativeIndexCount).texCoord = std::move(v);
     }
 
 }

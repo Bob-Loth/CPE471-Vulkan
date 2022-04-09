@@ -458,7 +458,7 @@ void Application::initGeometry(){
     mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
     mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
     
-    mObjectAnimShade["lantern"]->setStruct(BlPhColors["purple"]);
+    mObjectAnimShade["lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
     mObjectAnimShade["dummy"]->setStruct(BlPhColors["purple"]);
 
     //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
