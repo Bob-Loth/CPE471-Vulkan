@@ -68,7 +68,6 @@ struct AnimShadeData {
     //Use to fully control material properties
     AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn, uint32_t mode) :
         diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn), shadingLayer(mode) {}
-
 };
 
 

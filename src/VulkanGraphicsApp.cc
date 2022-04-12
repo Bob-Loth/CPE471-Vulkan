@@ -347,12 +347,8 @@ void VulkanGraphicsApp::initCommands(){
             // Bind vertex buffer for object
             vkCmdBindVertexBuffers(mCommandBuffers[i], 0, 1U, &mMultiShapeObjects[objIdx].getVertexBuffer(), std::array<VkDeviceSize, 1>{0}.data());
 
-
-
             // Bind uniforms to graphics pipeline if they exist with correct dynamic offset for this object instance
             if(mMultiUniformBuffer->boundLayoutCount() > 0 || mSingleUniformBuffer.boundInterfaceCount() > 0){
-                
-                
                 vkCmdBindDescriptorSets(
              /*command buffer to bind to*/  mCommandBuffers[i],
              /*pipeline bind point*/        VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -367,8 +363,18 @@ void VulkanGraphicsApp::initCommands(){
 
             // Bind index buffer for each shape and issue draw command. 
             for(size_t shapeIdx = 0; shapeIdx < mMultiShapeObjects[objIdx].shapeCount(); ++shapeIdx){
-                vkCmdBindIndexBuffer(mCommandBuffers[i], mMultiShapeObjects[objIdx].getIndexBuffer(), mMultiShapeObjects[objIdx].getShapeOffset(shapeIdx), VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(mCommandBuffers[i], mMultiShapeObjects[objIdx].getShapeRange(shapeIdx), 1, 0U, 0U, 0U);
+                vkCmdBindIndexBuffer(
+                /*command buffer*/   mCommandBuffers[i],
+                /*index buffer*/     mMultiShapeObjects[objIdx].getIndexBuffer(),
+                /*offset*/           mMultiShapeObjects[objIdx].getShapeOffset(shapeIdx),
+                /*index type*/       VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(
+                /*command buffer*/   mCommandBuffers[i],
+                /*index count*/      mMultiShapeObjects[objIdx].getShapeRange(shapeIdx),
+                /*instance count*/   1,
+                /*first index*/      0U, //base index within the index buffer
+                /*vertex offset*/    0U, //the value added to the vertex index before indexing into the vertex buffer
+                /*first instance*/   0U); //instance id of the first instance to draw.
             }
             
         }
