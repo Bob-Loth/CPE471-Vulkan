@@ -361,18 +361,24 @@ void VulkanGraphicsApp::initCommands(){
                 );
             }
 
-            // Bind index buffer for each shape and issue draw command. 
+            // Bind index buffer for each shape and issue draw command.
+            // The previous version of this code bound the index buffer with an offset of
+            // mMultiShapeObjects[objIdx].getShapeRange(shapeIdx), and left the first index
+            // of vkCmdDrawIndexed at 0. Now, the whole index buffer is bound, and the first index of the draw
+            // is offset based on this amount. Now the bind command only has to be run once for each object,
+            // rather than once for each shape in each object.
+            vkCmdBindIndexBuffer(
+            /*command buffer*/   mCommandBuffers[i],
+            /*index buffer*/     mMultiShapeObjects[objIdx].getIndexBuffer(),
+            /*offset*/           0U,
+            /*index type*/       VK_INDEX_TYPE_UINT32);
             for(size_t shapeIdx = 0; shapeIdx < mMultiShapeObjects[objIdx].shapeCount(); ++shapeIdx){
-                vkCmdBindIndexBuffer(
-                /*command buffer*/   mCommandBuffers[i],
-                /*index buffer*/     mMultiShapeObjects[objIdx].getIndexBuffer(),
-                /*offset*/           mMultiShapeObjects[objIdx].getShapeOffset(shapeIdx),
-                /*index type*/       VK_INDEX_TYPE_UINT32);
+                
                 vkCmdDrawIndexed(
                 /*command buffer*/   mCommandBuffers[i],
                 /*index count*/      mMultiShapeObjects[objIdx].getShapeRange(shapeIdx),
                 /*instance count*/   1,
-                /*first index*/      0U, //base index within the index buffer
+                /*first index*/      mMultiShapeObjects[objIdx].getShapeOffset(shapeIdx), //base index within the index buffer
                 /*vertex offset*/    0U, //the value added to the vertex index before indexing into the vertex buffer
                 /*first instance*/   0U); //instance id of the first instance to draw.
             }
