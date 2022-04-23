@@ -352,6 +352,7 @@ void Application::render(double dt){
     static UniformTransformDataPtr cubeTfs = mObjectTransforms["cube"];
     
     static UniformTransformDataPtr lanternTfs = mObjectTransforms["lantern"];
+    static UniformTransformDataPtr orientationTestTfs = mObjectTransforms["OrientationTest"];
     static UniformTransformDataPtr dummyTfs = mObjectTransforms["dummy"];
     // Global time
     float gt = static_cast<float>(glfwGetTime());
@@ -367,6 +368,8 @@ void Application::render(double dt){
     
     // move the lantern into the background
     lanternTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
+
+    orientationTestTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
 
     //position dummy
     dummyTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>()/2, vec3(-1.0, 0.0, 0.0)) * glm::scale(vec3(1.0/25.0));
@@ -417,9 +420,10 @@ void Application::initGeometry(){
     mObjects["bunny"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/bunny.obj");
     mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
     mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
-    mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf");
+    mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf", false);
     
-    mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf");
+    mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf", false);
+    mObjects["OrientationTest"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "OrientationTest/OrientationTest.glb", true);
     mObjects["dummy"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/dummy.obj");
     
 
@@ -433,6 +437,7 @@ void Application::initGeometry(){
     mObjectTransforms["cube"] = UniformTransformData::create();
     
     mObjectTransforms["lantern"] = UniformTransformData::create();
+    mObjectTransforms["OrientationTest"] = UniformTransformData::create();
     mObjectTransforms["dummy"] = UniformTransformData::create();
     
     mObjectAnimShade["vulkan"] = UniformAnimShadeData::create();
@@ -443,6 +448,7 @@ void Application::initGeometry(){
     mObjectAnimShade["cube"] = UniformAnimShadeData::create();
     
     mObjectAnimShade["lantern"] = UniformAnimShadeData::create();
+    mObjectAnimShade["OrientationTest"] = UniformAnimShadeData::create();
     mObjectAnimShade["dummy"] = UniformAnimShadeData::create();
 
     //Make a color map
@@ -458,6 +464,7 @@ void Application::initGeometry(){
     mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
     
     mObjectAnimShade["lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
+    mObjectAnimShade["OrientationTest"]->setStruct(BlPhColors["purple"]);
     mObjectAnimShade["dummy"]->setStruct(BlPhColors["purple"]);
 
     //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
@@ -484,6 +491,7 @@ void Application::initGeometry(){
     VulkanGraphicsApp::addMultiShapeObject(mObjects["cube"], { {1, mObjectTransforms["cube"]}, {2, mObjectAnimShade["cube"]} });
     
     VulkanGraphicsApp::addMultiShapeObject(mObjects["lantern"], { {1, mObjectTransforms["lantern"]}, {2, mObjectAnimShade["lantern"]} });
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["OrientationTest"], { {1, mObjectTransforms["OrientationTest"]}, {2, mObjectAnimShade["OrientationTest"]} });
     VulkanGraphicsApp::addMultiShapeObject(mObjects["dummy"], { {1, mObjectTransforms["dummy"]}, {2, mObjectAnimShade["dummy"]} });
 }
 
@@ -493,14 +501,14 @@ void Application::initShaders(){
     VkDevice logicalDevice = VulkanGraphicsApp::getPrimaryDeviceBundle().logicalDevice;
 
     // Load the compiled shader code from disk. 
-    VkShaderModule vertShader = vkutils::load_shader_module(logicalDevice, STRIFY(SHADER_DIR) "/standard.vert.spv");
-    VkShaderModule fragShader = vkutils::load_shader_module(logicalDevice, STRIFY(SHADER_DIR) "/standard.frag.spv");
+    VkShaderModule vertShader = vkutils::load_shader_module(logicalDevice, STRIFY(SHADER_DIR) "/debug.vert.spv");
+    VkShaderModule fragShader = vkutils::load_shader_module(logicalDevice, STRIFY(SHADER_DIR) "/debug.frag.spv");
     
     assert(vertShader != VK_NULL_HANDLE);
     assert(fragShader != VK_NULL_HANDLE);
 
-    VulkanGraphicsApp::setVertexShader("standard.vert", vertShader);
-    VulkanGraphicsApp::setFragmentShader("vertexColor.frag", fragShader);
+    VulkanGraphicsApp::setVertexShader("debug.vert", vertShader);
+    VulkanGraphicsApp::setFragmentShader("debug.frag", fragShader);
 }
 
 

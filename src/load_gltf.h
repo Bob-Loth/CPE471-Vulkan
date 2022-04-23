@@ -43,6 +43,6 @@ private:
 //a node in the scene graph tree. Wraps tinygltf::Node with some tree traversal and extracts CTM data from tinygltf::model.
 
 
-ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename);
+ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename, bool isBinary);
 void process_gltf_contents(tinygltf::Model& model, ObjMultiShapeGeometry& ivGeoOut);
 #endif 

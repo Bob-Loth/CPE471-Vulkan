@@ -6,13 +6,20 @@
 using namespace tinygltf;
 using namespace glm;
 
-ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename) {
+ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename, bool isBinary) {
     Model model;
     TinyGLTF loader;
     std::string err;
     std::string warn;
     
-    bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+    bool ret;
+    if (isBinary) {
+        ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename);
+    }
+    else {
+        ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+    }
+    
     if (!warn.empty()) {
         std::cout << "gltf loader: " << warn << std::endl;
     }
@@ -92,7 +99,10 @@ void process_texcoords(const Model& model, const Accessor& accessor, std::vector
 }
 
 void process_indices(const Model& model, const Accessor& accessor, std::vector<ObjMultiShapeGeometry::index_t>& outputIndices, size_t cumulativeIndexCount) {
-    assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT);
+    assert(
+        accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT 
+        || accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE
+        || accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT);
     assert(accessor.type == TINYGLTF_TYPE_SCALAR);
     
     BufferView bufferView = model.bufferViews[accessor.bufferView];
@@ -104,9 +114,20 @@ void process_indices(const Model& model, const Accessor& accessor, std::vector<O
     auto data = buffer.data; //the vector of bytes. bufferView and accessor will be used to read it.
 
     for (int i = 0; i < accessor.count; i++) {
-        //convince the compiler that data points to unsigned short data. Move data ptr forward by stride bytes.
-        unsigned short* memoryLocation = reinterpret_cast<unsigned short*>(data.data() + offset + (i * static_cast<size_t>(stride)));
-        unsigned short val = *memoryLocation;
+        //convince the compiler that data points to a particular size of data. Move data ptr forward by stride bytes.
+        unsigned int val;
+        if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
+            unsigned short* memoryLocation = reinterpret_cast<unsigned short*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+            val = *memoryLocation;
+        }
+        else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
+            unsigned char* memoryLocation = reinterpret_cast<unsigned char*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+            val = *memoryLocation;
+        }
+        else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
+            unsigned int* memoryLocation = reinterpret_cast<unsigned int*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+            val = *memoryLocation;
+        }
         outputIndices.push_back(val + cumulativeIndexCount);
     }
 
@@ -132,7 +153,8 @@ void SceneGraph::constructCTMTree(const tinygltf::Model& model, Node input, Tree
         node.CTM = glm::translate(node.CTM, vec3(node.getNode().translation[0], node.getNode().translation[1], node.getNode().translation[2]));
     }
     if (node.getNode().rotation.size() == 4) {
-        quat q = quat(node.getNode().rotation[0], node.getNode().rotation[1], node.getNode().rotation[2], node.getNode().rotation[3]);
+        quat q = make_quat(node.getNode().rotation.data());
+        
         node.CTM *= mat4(q);
     }
     if (node.getNode().scale.size() == 3) {
@@ -141,6 +163,7 @@ void SceneGraph::constructCTMTree(const tinygltf::Model& model, Node input, Tree
     //There's also a completed matrix transform option, so if the file has that, override the CTM with this new matrix.
     if (node.getNode().matrix.size() == 16) {
         node.CTM = glm::make_mat4x4(node.getNode().matrix.data());
+        
     }
     //use recursion to apply the matrix stack concept to this node.getNode()'s children. Not tested currently, as lantern test gltf doesn't have children
     //if the node has children
