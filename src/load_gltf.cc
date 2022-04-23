@@ -147,14 +147,12 @@ mat4 TreeNode::computeCTM(){
 
 void SceneGraph::constructCTMTree(const tinygltf::Model& model, Node input, TreeNode* parent) {
     TreeNode node = TreeNode(input, mat4(1.0f));//initialize a TreeNode with no matrix transforms.
-
     //apply any individual transforms in order.
     if (node.getNode().translation.size() == 3) {
         node.CTM = glm::translate(node.CTM, vec3(node.getNode().translation[0], node.getNode().translation[1], node.getNode().translation[2]));
     }
     if (node.getNode().rotation.size() == 4) {
-        quat q = make_quat(node.getNode().rotation.data());
-        
+        quat q = quat(node.getNode().rotation[3], node.getNode().rotation[0], node.getNode().rotation[1], node.getNode().rotation[2]);
         node.CTM *= mat4(q);
     }
     if (node.getNode().scale.size() == 3) {

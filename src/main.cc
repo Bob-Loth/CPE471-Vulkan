@@ -369,7 +369,7 @@ void Application::render(double dt){
     // move the lantern into the background
     lanternTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
 
-    orientationTestTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
+    orientationTestTfs->getStruct().Model = glm::translate(vec3(0.0, 4.0, -4.0)) * glm::rotate(glm::radians(45.0f), vec3(0,1,1)) * glm::scale(vec3(0.1));
 
     //position dummy
     dummyTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>()/2, vec3(-1.0, 0.0, 0.0)) * glm::scale(vec3(1.0/25.0));
