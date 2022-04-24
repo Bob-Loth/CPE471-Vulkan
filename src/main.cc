@@ -517,8 +517,15 @@ void Application::initShaders(){
     VkShaderModule vertShader = vkutils::load_shader_module(logicalDevice, STRIFY(SHADER_DIR) "/debug.vert.spv");
     VkShaderModule fragShader = vkutils::load_shader_module(logicalDevice, STRIFY(SHADER_DIR) "/debug.frag.spv");
     
+    VkShaderModule pVertShader = vkutils::load_shader_module(logicalDevice, STRIFY(SHADER_DIR) "/particle.vert.spv");
+    VkShaderModule pFragShader = vkutils::load_shader_module(logicalDevice, STRIFY(SHADER_DIR) "/particle.frag.spv");
+
     assert(vertShader != VK_NULL_HANDLE);
     assert(fragShader != VK_NULL_HANDLE);
+
+    //load these in whichever order. The last one set will be used in the first draw call.
+    VulkanGraphicsApp::setVertexShader("particle.vert", pVertShader);
+    VulkanGraphicsApp::setFragmentShader("particle.frag", pFragShader);
 
     VulkanGraphicsApp::setVertexShader("debug.vert", vertShader);
     VulkanGraphicsApp::setFragmentShader("debug.frag", fragShader);

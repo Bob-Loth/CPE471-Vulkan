@@ -37,7 +37,9 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     void addSingleInstanceUniform(uint32_t aBindPoint, const UniformDataInterfacePtr& aUniformInterface);
 
     void setVertexShader(const std::string& aShaderName, const VkShaderModule& aShaderModule);
+    void swapVertexShader(const std::string& aShaderName);
     void setFragmentShader(const std::string& aShaderName, const VkShaderModule& aShaderModule);
+    void swapFragmentShader(const std::string& aShaderName);
 
 
 
@@ -62,6 +64,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     void initCommandPool(); 
     void initTextures();
     void initRenderPipeline();
+    void initParticleRenderPipeline();
     void initFramebuffers();
     void initCommands();
     void initSync();
@@ -92,6 +95,9 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
 
     vkutils::VulkanBasicRasterPipelineBuilder mRenderPipeline;
     vkutils::VulkanDepthBundle mDepthBundle;
+
+    vkutils::VulkanBasicRasterPipelineBuilder mParticleRenderPipeline;
+    vkutils::VulkanDepthBundle mParticleDepthBundle;
 
     VkCommandPool mCommandPool = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> mCommandBuffers;

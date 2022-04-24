@@ -62,6 +62,16 @@ void VulkanGraphicsApp::setVertexShader(const std::string& aShaderName, const Vk
     }
 }
 
+void VulkanGraphicsApp::setParticleVertexShader(const std::string& aShaderName, const VkShaderModule& aShaderModule) {
+    if (mShaderModules.find(aShaderName) == mShaderModules.end()) {
+        throw std::runtime_error("VulkanGraphicsApp::swapParticleVertexShader() Error: Set vertex shader using VulkanGraphicsApp::setVertexShader() before swapping to it!");
+    }
+    mParticleVertexKey = aShaderName;
+    if (mParticleVertexKey == mParticleFragmentKey) {
+        throw std::runtime_error("Error: Keys/Names for the vertex and fragment shader cannot be the same!");
+    }
+}
+
 void VulkanGraphicsApp::setFragmentShader(const std::string& aShaderName, const VkShaderModule& aShaderModule){
     if(aShaderName.empty() || aShaderModule == VK_NULL_HANDLE){
         throw std::runtime_error("VulkanGraphicsApp::setFragmentShader() Error: Arguments must be a non-empty string and valid shader module!");
@@ -69,6 +79,16 @@ void VulkanGraphicsApp::setFragmentShader(const std::string& aShaderName, const 
     mShaderModules[aShaderName] = aShaderModule;
     mFragmentKey = aShaderName;
     if(mVertexKey == mFragmentKey){
+        throw std::runtime_error("Error: Keys/Names for the vertex and fragment shader cannot be the same!");
+    }
+}
+
+void VulkanGraphicsApp::swapFragmentShader(const std::string& aShaderName) {
+    if (mShaderModules.find(aShaderName) == mShaderModules.end()) {
+        throw std::runtime_error("VulkanGraphicsApp::swapFragmentShader() Error: Set vertex shader using VulkanGraphicsApp::setFragmentShader() before swapping to it!");
+    }
+    mFragmentKey = aShaderName;
+    if (mVertexKey == mFragmentKey) {
         throw std::runtime_error("Error: Keys/Names for the vertex and fragment shader cannot be the same!");
     }
 }
@@ -275,6 +295,85 @@ void VulkanGraphicsApp::initRenderPipeline(){
         vertStageInfo.pSpecializationInfo = nullptr;
     }
     VkPipelineShaderStageCreateInfo fragStageInfo;{
+        fragStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        fragStageInfo.pNext = nullptr;
+        fragStageInfo.flags = 0;
+        fragStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        fragStageInfo.module = fragShader;
+        fragStageInfo.pName = "main";
+        fragStageInfo.pSpecializationInfo = nullptr;
+    }
+    ctorSet.mProgrammableStages.emplace_back(vertStageInfo);
+    ctorSet.mProgrammableStages.emplace_back(fragStageInfo);
+
+    ctorSet.mVtxInputInfo.vertexBindingDescriptionCount = 1U;
+    ctorSet.mVtxInputInfo.pVertexBindingDescriptions = &sObjVertexInput.getBindingDescription();
+    ctorSet.mVtxInputInfo.vertexAttributeDescriptionCount = sObjVertexInput.getAttributeDescriptions().size();
+    ctorSet.mVtxInputInfo.pVertexAttributeDescriptions = sObjVertexInput.getAttributeDescriptions().data();
+
+    ctorSet.mPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    ctorSet.mPipelineLayoutInfo.pNext = 0;
+    ctorSet.mPipelineLayoutInfo.flags = 0;
+    ctorSet.mPipelineLayoutInfo.setLayoutCount = 1;
+    ctorSet.mPipelineLayoutInfo.pSetLayouts = &mUniformDescriptorSetLayout;
+    ctorSet.mPipelineLayoutInfo.pushConstantRangeCount = 0;
+    ctorSet.mPipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+    vkutils::VulkanBasicRasterPipelineBuilder::prepareViewport(ctorSet);
+    vkutils::VulkanBasicRasterPipelineBuilder::prepareRenderPass(ctorSet);
+
+    mRenderPipeline.build(ctorSet);
+}
+
+void VulkanGraphicsApp::initParticleRenderPipeline()
+{
+    if (mVertexKey.empty()) {
+        throw std::runtime_error("Error! No vertex shader has been set! A vertex shader must be set using setVertexShader()!");
+    }
+    else if (mFragmentKey.empty()) {
+        throw std::runtime_error("Error! No fragment shader has been set! A vertex shader must be set using setFragmentShader()!");
+    }
+
+    vkutils::GraphicsPipelineConstructionSet& ctorSet = mRenderPipeline.setupConstructionSet(VulkanDeviceHandlePair(getPrimaryDeviceBundle()), &mSwapchainProvider->getSwapchainBundle());
+
+    mDepthBundle = ctorSet.mDepthBundle = vkutils::VulkanBasicRasterPipelineBuilder::autoCreateDepthBuffer(ctorSet);
+    vkutils::VulkanBasicRasterPipelineBuilder::prepareFixedStages(ctorSet);
+
+    VkShaderModule vertShader = VK_NULL_HANDLE;
+    VkShaderModule fragShader = VK_NULL_HANDLE;
+    auto findVert = mShaderModules.find(mParticleVertexKey);
+    auto findFrag = mShaderModules.find(mParticleFragmentKey);
+    if (findVert == mShaderModules.end()) {
+        throw std::runtime_error("Error: Vertex shader name '" + mVertexKey + "' did not map to a valid shader module");
+    }
+    else {
+        vertShader = findVert->second;
+    }
+    if (findFrag == mShaderModules.end()) {
+        std::cerr << "Error: Fragment shader name '" + mFragmentKey + "' did not map to a valid shader module. Using fallback..." << std::endl;
+        findFrag = mShaderModules.find("fallback.frag");
+        if (findFrag != mShaderModules.end()) {
+            fragShader = findFrag->second;
+        }
+        else {
+            fragShader = vkutils::load_shader_module(getPrimaryDeviceBundle().logicalDevice.handle(), STRIFY(SHADER_DIR) "/fallback.frag.spv");
+            mShaderModules["fallback.frag"] = fragShader;
+        }
+    }
+    else {
+        fragShader = findFrag->second;
+    }
+
+    VkPipelineShaderStageCreateInfo vertStageInfo; {
+        vertStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        vertStageInfo.pNext = nullptr;
+        vertStageInfo.flags = 0;
+        vertStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+        vertStageInfo.module = vertShader;
+        vertStageInfo.pName = "main";
+        vertStageInfo.pSpecializationInfo = nullptr;
+    }
+    VkPipelineShaderStageCreateInfo fragStageInfo; {
         fragStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         fragStageInfo.pNext = nullptr;
         fragStageInfo.flags = 0;
