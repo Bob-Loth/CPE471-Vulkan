@@ -56,7 +56,7 @@ void process_vertices(const Model& model, const Accessor& accessor, std::vector<
     }
 }
 
-void process_normals(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices, size_t cumulativeIndexCount){
+void process_normals(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices, size_t cumulativeIndexCount, glm::mat4 CTM){
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     assert(accessor.type == TINYGLTF_TYPE_VEC3);
     
@@ -73,7 +73,7 @@ void process_normals(const Model& model, const Accessor& accessor, std::vector<O
         float* memoryLocation = reinterpret_cast<float*>(data.data() + offset + (i * static_cast<size_t>(stride)));
         //read in the vec3.
         //objVertices.emplace_back(ObjVertex{ glm::vec3(ptr_to_vec3(memoryLocation)) });
-        objVertices.at(i + cumulativeIndexCount).normal = std::move(ptr_to_vec3(memoryLocation));
+        objVertices.at(i + cumulativeIndexCount).normal = glm::normalize(CTM * glm::vec4(ptr_to_vec3(memoryLocation), 0.0f));
     }
 }
 
@@ -254,7 +254,7 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
             if (attrMap.find("NORMAL") != attrMap.end()) {
                 normalIndex = attrMap["NORMAL"];
                 Accessor normAcc = model.accessors[normalIndex];
-                process_normals(model, normAcc, objVertices, cumulativeIndexCount);
+                process_normals(model, normAcc, objVertices, cumulativeIndexCount, currentTransformMatrix);
             }
 
             //optionally find texture data and include it
