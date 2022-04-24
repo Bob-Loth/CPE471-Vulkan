@@ -6,6 +6,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <memory>
 
 #include "geometry.h"
 #include "tiny_gltf.h"
@@ -23,8 +24,8 @@ public:
     glm::mat4 computeCTM();
 
     glm::mat4 CTM;
-    TreeNode* parent;
-    std::vector<TreeNode*> children;
+    std::shared_ptr<TreeNode> parent;
+    std::vector<std::shared_ptr<TreeNode>> children;
 private:
     tinygltf::Node node;
     bool useEmbeddedTransforms;
@@ -33,11 +34,11 @@ private:
 class SceneGraph
 {
 public:
-    void constructCTMTree(const tinygltf::Model& model, tinygltf::Node input, TreeNode* parent);
+    void constructCTMTree(const tinygltf::Model& model, std::shared_ptr<tinygltf::Node> input, std::shared_ptr<TreeNode> parent);
     
-    std::vector<TreeNode>& data() { return sceneGraph; }
+    std::vector<std::shared_ptr<TreeNode>>& data() { return sceneGraph; }
 private:
-    std::vector<TreeNode> sceneGraph;
+    std::vector<std::shared_ptr<TreeNode>> sceneGraph;
 };
 
 //a node in the scene graph tree. Wraps tinygltf::Node with some tree traversal and extracts CTM data from tinygltf::model.

@@ -353,6 +353,8 @@ void Application::render(double dt){
     
     static UniformTransformDataPtr lanternTfs = mObjectTransforms["lantern"];
     static UniformTransformDataPtr orientationTestTfs = mObjectTransforms["OrientationTest"];
+    static UniformTransformDataPtr cesiumMilkTruckTfs = mObjectTransforms["CesiumMilkTruck"];
+    static UniformTransformDataPtr buggyTfs = mObjectTransforms["Buggy"];
     static UniformTransformDataPtr dummyTfs = mObjectTransforms["dummy"];
     // Global time
     float gt = static_cast<float>(glfwGetTime());
@@ -370,7 +372,8 @@ void Application::render(double dt){
     lanternTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
 
     orientationTestTfs->getStruct().Model = glm::translate(vec3(0.0, 4.0, -4.0)) * glm::rotate(glm::radians(45.0f), vec3(0,1,1)) * glm::scale(vec3(0.1));
-
+    cesiumMilkTruckTfs->getStruct().Model = glm::translate(vec3(0.0, -4.0, -4.0)) * glm::scale(vec3(0.5));
+    buggyTfs->getStruct().Model = glm::translate(vec3(0.0, 4.0, 4.0)) * glm::scale(vec3(0.5));
     //position dummy
     dummyTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>()/2, vec3(-1.0, 0.0, 0.0)) * glm::scale(vec3(1.0/25.0));
 
@@ -424,6 +427,8 @@ void Application::initGeometry(){
     
     mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf", false);
     mObjects["OrientationTest"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "OrientationTest/OrientationTest.glb", true);
+    mObjects["CesiumMilkTruck"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "CesiumMilkTruck/CesiumMilkTruck.glb", true);
+    //mObjects["Buggy"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Buggy/Buggy.glb", true);
     mObjects["dummy"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/dummy.obj");
     
 
@@ -438,6 +443,8 @@ void Application::initGeometry(){
     
     mObjectTransforms["lantern"] = UniformTransformData::create();
     mObjectTransforms["OrientationTest"] = UniformTransformData::create();
+    mObjectTransforms["CesiumMilkTruck"] = UniformTransformData::create();
+    mObjectTransforms["Buggy"] = UniformTransformData::create();
     mObjectTransforms["dummy"] = UniformTransformData::create();
     
     mObjectAnimShade["vulkan"] = UniformAnimShadeData::create();
@@ -449,6 +456,8 @@ void Application::initGeometry(){
     
     mObjectAnimShade["lantern"] = UniformAnimShadeData::create();
     mObjectAnimShade["OrientationTest"] = UniformAnimShadeData::create();
+    mObjectAnimShade["CesiumMilkTruck"] = UniformAnimShadeData::create();
+    mObjectAnimShade["Buggy"] = UniformAnimShadeData::create();
     mObjectAnimShade["dummy"] = UniformAnimShadeData::create();
 
     //Make a color map
@@ -464,6 +473,8 @@ void Application::initGeometry(){
     mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
     
     mObjectAnimShade["lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
+    mObjectAnimShade["CesiumMilkTruck"]->setStruct(AnimShadeData(TEXTURED_SHADED, 5));
+    mObjectAnimShade["Buggy"]->setStruct(BlPhColors["white"]);
     mObjectAnimShade["OrientationTest"]->setStruct(BlPhColors["purple"]);
     mObjectAnimShade["dummy"]->setStruct(BlPhColors["purple"]);
 
@@ -492,6 +503,8 @@ void Application::initGeometry(){
     
     VulkanGraphicsApp::addMultiShapeObject(mObjects["lantern"], { {1, mObjectTransforms["lantern"]}, {2, mObjectAnimShade["lantern"]} });
     VulkanGraphicsApp::addMultiShapeObject(mObjects["OrientationTest"], { {1, mObjectTransforms["OrientationTest"]}, {2, mObjectAnimShade["OrientationTest"]} });
+    VulkanGraphicsApp::addMultiShapeObject(mObjects["CesiumMilkTruck"], { {1, mObjectTransforms["CesiumMilkTruck"]}, {2, mObjectAnimShade["CesiumMilkTruck"]} });
+    //VulkanGraphicsApp::addMultiShapeObject(mObjects["Buggy"], { {1, mObjectTransforms["Buggy"]}, {2, mObjectAnimShade["Buggy"]} });
     VulkanGraphicsApp::addMultiShapeObject(mObjects["dummy"], { {1, mObjectTransforms["dummy"]}, {2, mObjectAnimShade["dummy"]} });
 }
 

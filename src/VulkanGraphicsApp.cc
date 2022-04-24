@@ -44,6 +44,7 @@ void VulkanGraphicsApp::initTextures() {
     textureLoader.createTexture(STRIFY(ASSET_DIR) "flower.jpg");
     textureLoader.createTexture(STRIFY(ASSET_DIR) "gltfOverview-2.0.0b.png");
     textureLoader.createTexture(STRIFY(ASSET_DIR) "Lantern/Lantern_baseColor.png");
+    textureLoader.createTexture(STRIFY(ASSET_DIR) "CesiumMilkTruck/CesiumMilkTruck.jpg");
 }
 
 const VkExtent2D& VulkanGraphicsApp::getFramebufferSize() const{

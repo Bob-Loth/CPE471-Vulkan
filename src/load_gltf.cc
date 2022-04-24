@@ -5,6 +5,7 @@
 
 using namespace tinygltf;
 using namespace glm;
+using namespace std;
 
 ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename, bool isBinary) {
     Model model;
@@ -137,7 +138,7 @@ void process_indices(const Model& model, const Accessor& accessor, std::vector<O
 mat4 TreeNode::computeCTM(){
     if (!useEmbeddedTransforms) return mat4(1.0f);
     mat4 builtCTM = CTM; //the node's CTM will still contain only the node-local transform.
-    TreeNode* currentParent = parent;
+    shared_ptr<TreeNode> currentParent = parent;
     while (currentParent != nullptr) {
         builtCTM = currentParent->CTM * builtCTM;
         currentParent = currentParent->parent;
@@ -145,40 +146,39 @@ mat4 TreeNode::computeCTM(){
     return builtCTM; 
 }
 
-void SceneGraph::constructCTMTree(const tinygltf::Model& model, Node input, TreeNode* parent) {
-    TreeNode node = TreeNode(input, mat4(1.0f));//initialize a TreeNode with no matrix transforms.
+void SceneGraph::constructCTMTree(const tinygltf::Model& model, std::shared_ptr<tinygltf::Node> input, std::shared_ptr<TreeNode> parent) {
+    shared_ptr<TreeNode> node = make_shared<TreeNode>(*input, mat4(1.0f));//initialize a TreeNode with no matrix transforms.
     //apply any individual transforms in order.
-    if (node.getNode().translation.size() == 3) {
-        node.CTM = glm::translate(node.CTM, vec3(node.getNode().translation[0], node.getNode().translation[1], node.getNode().translation[2]));
+    if (node->getNode().translation.size() == 3) {
+        node->CTM = glm::translate(node->CTM, vec3(node->getNode().translation[0], node->getNode().translation[1], node->getNode().translation[2]));
     }
-    if (node.getNode().rotation.size() == 4) {
-        quat q = quat(node.getNode().rotation[3], node.getNode().rotation[0], node.getNode().rotation[1], node.getNode().rotation[2]);
-        node.CTM *= mat4(q);
+    if (node->getNode().rotation.size() == 4) {
+        quat q = quat(node->getNode().rotation[3], node->getNode().rotation[0], node->getNode().rotation[1], node->getNode().rotation[2]);
+        node->CTM *= mat4(q);
     }
-    if (node.getNode().scale.size() == 3) {
-        node.CTM = glm::scale(node.CTM, vec3(node.getNode().scale[0], node.getNode().scale[1], node.getNode().scale[2]));
+    if (node->getNode().scale.size() == 3) {
+        node->CTM = glm::scale(node->CTM, vec3(node->getNode().scale[0], node->getNode().scale[1], node->getNode().scale[2]));
     }
     //There's also a completed matrix transform option, so if the file has that, override the CTM with this new matrix.
-    if (node.getNode().matrix.size() == 16) {
-        node.CTM = glm::make_mat4x4(node.getNode().matrix.data());
+    if (node->getNode().matrix.size() == 16) {
+        node->CTM = glm::make_mat4x4(node->getNode().matrix.data());
         
     }
-    //use recursion to apply the matrix stack concept to this node.getNode()'s children. Not tested currently, as lantern test gltf doesn't have children
     //if the node has children
-    if (!node.getNode().children.empty()) {
-        for (size_t i = 0; i < node.getNode().children.size(); i++) {
+    if (!node->getNode().children.empty()) {
+        for (size_t i = 0; i < node->getNode().children.size(); i++) {
             //construct a new TreeNode that has the child node, and the CTM of the parent
-            Node childNode = model.nodes[node.getNode().children[i]];
+            shared_ptr<Node> childNode = make_shared<Node>(model.nodes[node->getNode().children[i]]);
             //call this function again.
-            constructCTMTree(model, childNode, &node);
+            constructCTMTree(model, childNode, node);
         }
     }
+    node->parent = parent;
     if (parent != nullptr) { //this is a child of some other node.
-        parent->children.push_back(&node);
+        parent->children.push_back(node);
     }
-    else { //no parent, this is a root node.
-        sceneGraph.push_back(node);
-    }
+    sceneGraph.push_back(node);
+    
 }
 
 //gltf buffers may have many interleaved buffers, and the main objects that
@@ -211,11 +211,13 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
     }
     
     SceneGraph graph;
-    for (const auto& node : model.nodes) {
-        graph.constructCTMTree(model, node, nullptr);
+    //for (const auto& node : model.nodes) {
+    //    graph.constructCTMTree(model, node, nullptr);
+    //}
+    tinygltf::Scene defaultScene = model.scenes[model.defaultScene];
+    for (int i = 0; i < defaultScene.nodes.size(); i++) {
+        graph.constructCTMTree(model, make_shared<tinygltf::Node>(model.nodes[defaultScene.nodes[i]]), nullptr);
     }
-    
-    
     // Loop over shapes in the gltf file
 
     //the gltf format's individual primitive indices all start from 0. 
@@ -224,13 +226,13 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
     //E.g. if shape 0 has 30, shape 1 has 60 indices, then shape 2's indices will start from 90 instead of 0.
     std::vector<ObjVertex> objVertices;
     size_t cumulativeIndexCount = 0;
-    for (TreeNode& treeNode : graph.data()) {
+    for (auto& treeNode : graph.data()) {
         //construct the CTM from the node's data.
-        glm::mat4 currentTransformMatrix = treeNode.computeCTM();//constructCTM(model, TreeNode(node, mat4(1.0f)));
-        if (treeNode.getNode().mesh == -1) {
+        glm::mat4 currentTransformMatrix = treeNode->computeCTM();//constructCTM(model, TreeNode(node, mat4(1.0f)));
+        if (treeNode->getNode().mesh == -1) {
             continue; //skip this node if it contains no meshes. This should be pretty rare.
         }
-        for (const auto& primitive : model.meshes[treeNode.getNode().mesh].primitives) {//shapes in mesh
+        for (const auto& primitive : model.meshes[treeNode->getNode().mesh].primitives) {//shapes in mesh
             assert(primitive.mode == TINYGLTF_MODE_TRIANGLES); //only work with triangle data for now.
             std::vector<ObjMultiShapeGeometry::index_t> outputIndices;
 
