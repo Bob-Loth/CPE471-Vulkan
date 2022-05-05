@@ -44,7 +44,6 @@ class UniformDataInterface : public virtual UniformDataLayout
     friend class UniformBuffer;
     friend class MultiInstanceUniformBuffer;
     friend class MultiInstanceCombinedImageSampler;
-    
 };
 
 using UniformDataInterfacePtr = std::shared_ptr<UniformDataInterface>;

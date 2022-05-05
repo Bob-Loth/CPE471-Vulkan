@@ -374,6 +374,7 @@ void VulkanGraphicsApp::initCommands(){
             /*offset*/           0U,
             /*index type*/       VK_INDEX_TYPE_UINT32);
             for(size_t shapeIdx = 0; shapeIdx < mMultiShapeObjects[objIdx].shapeCount(); ++shapeIdx){
+                //
                 
                 vkCmdDrawIndexed(
                 /*command buffer*/   mCommandBuffers[i],

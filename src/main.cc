@@ -25,60 +25,6 @@ enum ShadingLayer { BLINN_PHONG, NORMAL_MAP, TEXTURE_MAP, TEXTURED_FLAT, TEXTURE
 ShadingLayer currentShadingLayer = NO_FORCED_LAYER; /*static initialization problem generates linker error, using global for now*/
 
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// The code below defines the types and formatting for uniform data used in our shaders. 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//TODO move the View matrix into a struct, possibly Transforms, that will change between draw calls.
-// Uniform data that applies to the entire scene, and will not change between draw calls.
-struct WorldInfo {
-    alignas(16) glm::mat4 View;
-    alignas(16) glm::mat4 Perspective;
-    glm::vec4 lightPosition[8] = {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(1.0f, 1.0f, -1.0f, 1.0f),
-        glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f),
-        glm::vec4(1.0f, -1.0f, 1.0f, 1.0f),
-        glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),
-        glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),
-        glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f)
-    };
-};
-
-// Model transform matrix which will be different for each object / draw call.
-struct Transforms {
-    alignas(16) glm::mat4 Model;
-};
-
-// Additional uniform data that varies per-object / per-draw.
-struct AnimShadeData {
-    glm::vec4 diffuseData = glm::vec4(1.0f);
-    glm::vec4 ambientData = glm::vec4(0.1f, 0.1f, 0.1f, 0.0f);
-    glm::vec4 specularData = glm::vec4(1.0f);
-    float shininess = 300.0f;
-    uint32_t shadingLayer = 0;
-    uint32_t textureIndex = -1; //debug texture
-    //default steely material
-    AnimShadeData() {};
-    //textures only
-    AnimShadeData(uint32_t mode, uint32_t texIdx) : shadingLayer(mode), textureIndex(texIdx) {}
-    //Use to edit diffuse and shininess only
-    AnimShadeData(glm::vec4 dif, float shn, uint32_t mode) :
-        diffuseData(dif), shininess(shn), shadingLayer(mode) {}
-    //Use to fully control material properties
-    AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn, uint32_t mode) :
-        diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn), shadingLayer(mode) {}
-};
-
-
-// Type definitions wrapping around our structures to make them usable as uniform data
-using UniformWorldInfo     = UniformStructData<WorldInfo>;
-using UniformTransformData = UniformStructData<Transforms>;
-using UniformAnimShadeData = UniformStructData<AnimShadeData>;
-
-using UniformWorldInfoPtr     = std::shared_ptr<UniformWorldInfo>;
-using UniformTransformDataPtr = std::shared_ptr<UniformTransformData>;
-using UniformAnimShadeDataPtr = std::shared_ptr<UniformAnimShadeData>;
 
 /// Our application class. Pay attention to the member variables defined at the end. 
 class Application : public VulkanGraphicsApp
@@ -105,15 +51,7 @@ class Application : public VulkanGraphicsApp
     void initUniforms();
     void render(double dt);
 
-    /// Collection describing the overall layout of all uniform data being used. 
-    UniformDataLayoutSet mUniformLayoutSet;
-
-    /// Collection of objects in our scene. Each is geometry loaded from an .obj file.
-    std::unordered_map<std::string, ObjMultiShapeGeometry> mObjects;
-    /// Collection of model transform data. Contains an entry for each object in mObjects.
-    std::unordered_map<std::string, UniformTransformDataPtr> mObjectTransforms;
-    /// Collection of extra per-object data. Contains an entry for each object in mObjects.
-    std::unordered_map<std::string, UniformAnimShadeDataPtr> mObjectAnimShade;
+    
     //holds the original state of each of the object's shading layer
     std::unordered_map<std::string, ShadingLayer> mKeyCallbackHolds;
     
@@ -344,36 +282,36 @@ void Application::render(double dt){
 
     // Get pointers to the individual transforms for each object in the scene
     
-    static UniformTransformDataPtr logoTfs = mObjectTransforms["vulkan"];
-    static UniformTransformDataPtr monkeyTfs = mObjectTransforms["monkey"];
-    static UniformTransformDataPtr bunnyTfs = mObjectTransforms["bunny"];
-    static UniformTransformDataPtr teapotTfs = mObjectTransforms["teapot"];
-    static UniformTransformDataPtr ballTfs = mObjectTransforms["ballTex"];
-    static UniformTransformDataPtr cubeTfs = mObjectTransforms["cube"];
+    //~hierarchy~static UniformTransformDataPtr logoTfs = mObjectTransforms["vulkan"];
+    //~hierarchy~static UniformTransformDataPtr monkeyTfs = mObjectTransforms["monkey"];
+    //~hierarchy~static UniformTransformDataPtr bunnyTfs = mObjectTransforms["bunny"];
+    //~hierarchy~static UniformTransformDataPtr teapotTfs = mObjectTransforms["teapot"];
+    //~hierarchy~static UniformTransformDataPtr ballTfs = mObjectTransforms["ballTex"];
+    //~hierarchy~static UniformTransformDataPtr cubeTfs = mObjectTransforms["cube"];
     
-    static UniformTransformDataPtr lanternTfs = mObjectTransforms["lantern"];
-    static UniformTransformDataPtr orientationTestTfs = mObjectTransforms["OrientationTest"];
-    static UniformTransformDataPtr cesiumMilkTruckTfs = mObjectTransforms["CesiumMilkTruck"];
-    static UniformTransformDataPtr buggyTfs = mObjectTransforms["Buggy"];
+    //~hierarchy~static UniformTransformDataPtr lanternTfs = mObjectTransforms["lantern"];
+    //~hierarchy~static UniformTransformDataPtr orientationTestTfs = mObjectTransforms["OrientationTest"];
+    //~hierarchy~static UniformTransformDataPtr cesiumMilkTruckTfs = mObjectTransforms["CesiumMilkTruck"];
+    //~hierarchy~static UniformTransformDataPtr buggyTfs = mObjectTransforms["Buggy"];
     static UniformTransformDataPtr dummyTfs = mObjectTransforms["dummy"];
     // Global time
     float gt = static_cast<float>(glfwGetTime());
     
     // Spin the logo in place. 
-    logoTfs->getStruct().Model = glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0));
+    //~hierarchy~logoTfs->getStruct().Model = glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0));
     
     // Spin the ball opposite direction of logo, above it.
-    ballTfs->getStruct().Model = glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
+    //~hierarchy~ballTfs->getStruct().Model = glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
 
     // Spin the cube around above both the logo and the ball.
-    cubeTfs->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
+    //~hierarchy~cubeTfs->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
     
     // move the lantern into the background
-    lanternTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
+    //~hierarchy~lanternTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
 
-    orientationTestTfs->getStruct().Model = glm::translate(vec3(0.0, 4.0, -4.0)) * glm::rotate(glm::radians(45.0f), vec3(0,1,1)) * glm::scale(vec3(0.1));
-    cesiumMilkTruckTfs->getStruct().Model = glm::translate(vec3(0.0, -4.0, -4.0)) * glm::scale(vec3(0.5));
-    buggyTfs->getStruct().Model = glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05));
+    //~hierarchy~orientationTestTfs->getStruct().Model = glm::translate(vec3(0.0, 4.0, -4.0)) * glm::rotate(glm::radians(45.0f), vec3(0,1,1)) * glm::scale(vec3(0.1));
+    //~hierarchy~cesiumMilkTruckTfs->getStruct().Model = glm::translate(vec3(0.0, -4.0, -4.0)) * glm::scale(vec3(0.5));
+    //~hierarchy~buggyTfs->getStruct().Model = glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05));
     //position dummy
     dummyTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>()/2, vec3(-1.0, 0.0, 0.0)) * glm::scale(vec3(1.0/25.0));
 
@@ -381,9 +319,9 @@ void Application::render(double dt){
     constexpr float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
     float radius = 4.5f;
     
-    monkeyTfs->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*0), .2f*sin(gt*4.0f+angle*0), sin(angle*0))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
-    bunnyTfs->getStruct().Model  = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*1), .2f*sin(gt*4.0f+angle*1), sin(angle*1))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
-    teapotTfs->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*2), .2f*sin(gt*4.0f+angle*2), sin(angle*2))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
+    //~hierarchy~monkeyTfs->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*0), .2f*sin(gt*4.0f+angle*0), sin(angle*0))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
+    //~hierarchy~bunnyTfs->getStruct().Model  = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*1), .2f*sin(gt*4.0f+angle*1), sin(angle*1))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
+    //~hierarchy~teapotTfs->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*2), .2f*sin(gt*4.0f+angle*2), sin(angle*2))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
     
     // Tell the GPU to render a frame. 
     VulkanGraphicsApp::render();
@@ -418,46 +356,46 @@ void initBlinnPhongColorMap(unordered_map<string, AnimShadeData> *map) {
 void Application::initGeometry(){
     // Load obj files 
     
-    mObjects["vulkan"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/vulkan.obj");
-    mObjects["monkey"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/suzanne.obj");
-    mObjects["bunny"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/bunny.obj");
-    mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
-    mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
-    mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf", false);
+    //~hierarchy~mObjects["vulkan"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/vulkan.obj");
+    //~hierarchy~mObjects["monkey"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/suzanne.obj");
+    //~hierarchy~mObjects["bunny"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/bunny.obj");
+    //~hierarchy~mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
+    //~hierarchy~mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
+    //~hierarchy~mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf", false);
     
-    mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf", false);
-    mObjects["OrientationTest"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "OrientationTest/OrientationTest.glb", true);
-    mObjects["CesiumMilkTruck"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "CesiumMilkTruck/CesiumMilkTruck.glb", true);
-    mObjects["Buggy"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Buggy/Buggy.glb", true);
+    //~hierarchy~mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf", false);
+    //~hierarchy~mObjects["OrientationTest"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "OrientationTest/OrientationTest.glb", true);
+    //~hierarchy~mObjects["CesiumMilkTruck"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "CesiumMilkTruck/CesiumMilkTruck.glb", true);
+    //~hierarchy~mObjects["Buggy"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Buggy/Buggy.glb", true);
     mObjects["dummy"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/dummy.obj");
     
 
     // Create new uniform data for each object
     
-    mObjectTransforms["vulkan"] = UniformTransformData::create();
-    mObjectTransforms["monkey"] = UniformTransformData::create();
-    mObjectTransforms["bunny"] = UniformTransformData::create();
-    mObjectTransforms["teapot"] = UniformTransformData::create();
-    mObjectTransforms["ballTex"] = UniformTransformData::create();
-    mObjectTransforms["cube"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["vulkan"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["monkey"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["bunny"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["teapot"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["ballTex"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["cube"] = UniformTransformData::create();
     
-    mObjectTransforms["lantern"] = UniformTransformData::create();
-    mObjectTransforms["OrientationTest"] = UniformTransformData::create();
-    mObjectTransforms["CesiumMilkTruck"] = UniformTransformData::create();
-    mObjectTransforms["Buggy"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["lantern"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["OrientationTest"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["CesiumMilkTruck"] = UniformTransformData::create();
+    //~hierarchy~mObjectTransforms["Buggy"] = UniformTransformData::create();
     mObjectTransforms["dummy"] = UniformTransformData::create();
     
-    mObjectAnimShade["vulkan"] = UniformAnimShadeData::create();
-    mObjectAnimShade["monkey"] = UniformAnimShadeData::create();
-    mObjectAnimShade["bunny"] = UniformAnimShadeData::create();
-    mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
-    mObjectAnimShade["ballTex"] = UniformAnimShadeData::create();
-    mObjectAnimShade["cube"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["vulkan"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["monkey"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["bunny"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["ballTex"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["cube"] = UniformAnimShadeData::create();
     
-    mObjectAnimShade["lantern"] = UniformAnimShadeData::create();
-    mObjectAnimShade["OrientationTest"] = UniformAnimShadeData::create();
-    mObjectAnimShade["CesiumMilkTruck"] = UniformAnimShadeData::create();
-    mObjectAnimShade["Buggy"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["lantern"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["OrientationTest"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["CesiumMilkTruck"] = UniformAnimShadeData::create();
+    //~hierarchy~mObjectAnimShade["Buggy"] = UniformAnimShadeData::create();
     mObjectAnimShade["dummy"] = UniformAnimShadeData::create();
 
     //Make a color map
@@ -466,45 +404,45 @@ void Application::initGeometry(){
 
     //set uniform shading data to colors defined in color map
     
-    mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
-    mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
-    mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
-    mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
-    mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
+    //~hierarchy~mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
+    //~hierarchy~mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
+    //~hierarchy~mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
+    //~hierarchy~mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
+    //~hierarchy~mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
     
-    mObjectAnimShade["lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
-    mObjectAnimShade["CesiumMilkTruck"]->setStruct(AnimShadeData(TEXTURED_SHADED, 5));
-    mObjectAnimShade["Buggy"]->setStruct(BlPhColors["white"]);
-    mObjectAnimShade["OrientationTest"]->setStruct(BlPhColors["purple"]);
+    //~hierarchy~mObjectAnimShade["lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
+    //~hierarchy~mObjectAnimShade["CesiumMilkTruck"]->setStruct(AnimShadeData(TEXTURED_SHADED, 5));
+    //~hierarchy~mObjectAnimShade["Buggy"]->setStruct(BlPhColors["white"]);
+    //~hierarchy~mObjectAnimShade["OrientationTest"]->setStruct(BlPhColors["purple"]);
     mObjectAnimShade["dummy"]->setStruct(BlPhColors["purple"]);
 
     //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
     recordShadingLayers();
     // Add object to the scene along with its uniform data
     
-    VulkanGraphicsApp::addMultiShapeObject(
-        mObjects["vulkan"], // The object
-
-        // Collection of uniform data for the object
-        {
-            {1, mObjectTransforms["vulkan"]}, // Bind transform matrix to binding point #1
-            {2, mObjectAnimShade["vulkan"]}, // Bind other uniform data to binding point #2
-        }
-        
-    );
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(
+    //~hierarchy~    mObjects["vulkan"], // The object
+    //~hierarchy~
+    //~hierarchy~    // Collection of uniform data for the object
+    //~hierarchy~    {
+    //~hierarchy~        {1, mObjectTransforms["vulkan"]}, // Bind transform matrix to binding point #1
+    //~hierarchy~        {2, mObjectAnimShade["vulkan"]}, // Bind other uniform data to binding point #2
+    //~hierarchy~    }
+    //~hierarchy~    
+    //~hierarchy~);
     
     // Add the other objects the same way as above. 
     
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["monkey"], {{1, mObjectTransforms["monkey"]}, {2, mObjectAnimShade["monkey"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["bunny"], {{1, mObjectTransforms["bunny"]}, {2, mObjectAnimShade["bunny"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]}});
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["cube"], { {1, mObjectTransforms["cube"]}, {2, mObjectAnimShade["cube"]} });
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["monkey"], {{1, mObjectTransforms["monkey"]}, {2, mObjectAnimShade["monkey"]}});
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["bunny"], {{1, mObjectTransforms["bunny"]}, {2, mObjectAnimShade["bunny"]}});
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}});
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]}});
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["cube"], { {1, mObjectTransforms["cube"]}, {2, mObjectAnimShade["cube"]} });
     
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["lantern"], { {1, mObjectTransforms["lantern"]}, {2, mObjectAnimShade["lantern"]} });
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["OrientationTest"], { {1, mObjectTransforms["OrientationTest"]}, {2, mObjectAnimShade["OrientationTest"]} });
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["CesiumMilkTruck"], { {1, mObjectTransforms["CesiumMilkTruck"]}, {2, mObjectAnimShade["CesiumMilkTruck"]} });
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["Buggy"], { {1, mObjectTransforms["Buggy"]}, {2, mObjectAnimShade["Buggy"]} });
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["lantern"], { {1, mObjectTransforms["lantern"]}, {2, mObjectAnimShade["lantern"]} });
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["OrientationTest"], { {1, mObjectTransforms["OrientationTest"]}, {2, mObjectAnimShade["OrientationTest"]} });
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["CesiumMilkTruck"], { {1, mObjectTransforms["CesiumMilkTruck"]}, {2, mObjectAnimShade["CesiumMilkTruck"]} });
+    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["Buggy"], { {1, mObjectTransforms["Buggy"]}, {2, mObjectAnimShade["Buggy"]} });
     VulkanGraphicsApp::addMultiShapeObject(mObjects["dummy"], { {1, mObjectTransforms["dummy"]}, {2, mObjectAnimShade["dummy"]} });
 }
 

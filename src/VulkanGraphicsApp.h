@@ -14,6 +14,63 @@
 #include <map>
 #include <memory>
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// The code below defines the types and formatting for uniform data used in our shaders. 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//TODO move the View matrix into a struct, possibly Transforms, that will change between draw calls.
+// Uniform data that applies to the entire scene, and will not change between draw calls.
+struct WorldInfo {
+    alignas(16) glm::mat4 View;
+    alignas(16) glm::mat4 Perspective;
+    glm::vec4 lightPosition[8] = {
+        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+        glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f),
+        glm::vec4(1.0f, 1.0f, -1.0f, 1.0f),
+        glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f),
+        glm::vec4(1.0f, -1.0f, 1.0f, 1.0f),
+        glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),
+        glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),
+        glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f)
+    };
+};
+
+// Model transform matrix which will be different for each object / draw call.
+struct Transforms {
+    alignas(16) glm::mat4 Model;
+};
+
+// Additional uniform data that varies per-object / per-draw.
+struct AnimShadeData {
+    glm::vec4 diffuseData = glm::vec4(1.0f);
+    glm::vec4 ambientData = glm::vec4(0.1f, 0.1f, 0.1f, 0.0f);
+    glm::vec4 specularData = glm::vec4(1.0f);
+    float shininess = 300.0f;
+    uint32_t shadingLayer = 0;
+    uint32_t textureIndex = -1; //debug texture
+    //default steely material
+    AnimShadeData() {};
+    //textures only
+    AnimShadeData(uint32_t mode, uint32_t texIdx) : shadingLayer(mode), textureIndex(texIdx) {}
+    //Use to edit diffuse and shininess only
+    AnimShadeData(glm::vec4 dif, float shn, uint32_t mode) :
+        diffuseData(dif), shininess(shn), shadingLayer(mode) {}
+    //Use to fully control material properties
+    AnimShadeData(glm::vec4 dif, glm::vec4 amb, glm::vec4 spc, float shn, uint32_t mode) :
+        diffuseData(dif), ambientData(amb), specularData(spc), shininess(shn), shadingLayer(mode) {}
+};
+
+
+// Type definitions wrapping around our structures to make them usable as uniform data
+using UniformWorldInfo = UniformStructData<WorldInfo>;
+using UniformTransformData = UniformStructData<Transforms>;
+using UniformAnimShadeData = UniformStructData<AnimShadeData>;
+
+using UniformWorldInfoPtr = std::shared_ptr<UniformWorldInfo>;
+using UniformTransformDataPtr = std::shared_ptr<UniformTransformData>;
+using UniformAnimShadeDataPtr = std::shared_ptr<UniformAnimShadeData>;
+
+
+
 class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
  public:
     /// Default constructor runs full initCore() immediately. Use protected no-init constructor
@@ -48,6 +105,16 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     
     virtual const VkApplicationInfo& getAppInfo() const override;
     virtual const std::vector<std::string>& getRequestedValidationLayers() const override;
+
+    /// Collection describing the overall layout of all uniform data being used. 
+    UniformDataLayoutSet mUniformLayoutSet;
+
+    /// Collection of objects in our scene. Each is geometry loaded from an .obj file.
+    std::unordered_map<std::string, ObjMultiShapeGeometry> mObjects;
+    /// Collection of model transform data. Contains an entry for each object in mObjects.
+    std::unordered_map<std::string, UniformTransformDataPtr> mObjectTransforms;
+    /// Collection of extra per-object data. Contains an entry for each object in mObjects.
+    std::unordered_map<std::string, UniformAnimShadeDataPtr> mObjectAnimShade;
 
 #ifdef CPE471_VULKAN_SAFETY_RAILS
  private:
