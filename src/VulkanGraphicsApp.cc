@@ -83,13 +83,14 @@ void VulkanGraphicsApp::initMultis(const UniformDataLayoutSet& aUniformLayout){
 }
 
 
-void VulkanGraphicsApp::addMultiShapeObject(const ObjMultiShapeGeometry& mObject, const UniformDataInterfaceSet& aUniformData){
+void VulkanGraphicsApp::addMultiShapeObject(const ObjMultiShapeGeometry& mObject, const std::vector<UniformDataInterfaceSet>& aUniformData){
     mMultiShapeObjects.emplace_back(mObject);
     if(mMultiUniformBuffer == nullptr){
         throw std::runtime_error("initMultiShapeUniformBuffer() must be called before addMultiShapeObject()!");
     }
-    mMultiUniformBuffer->pushBackInstance(aUniformData);
-    
+    for (const auto& instanceData : aUniformData) {
+        mMultiUniformBuffer->pushBackInstance(instanceData);
+    }
     if(mTransferCmdBuffer != VK_NULL_HANDLE){
         transferGeometry();
         reinitUniformResources();
@@ -321,6 +322,7 @@ void VulkanGraphicsApp::initCommands(){
     }
 
     for(size_t i = 0; i < mCommandBuffers.size(); ++i){
+        size_t totalShapeIdx = 0;
         VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, 0 , nullptr};
         if(vkBeginCommandBuffer(mCommandBuffers[i], &beginInfo) != VK_SUCCESS){
             throw std::runtime_error("Failed to begin command recording!");
@@ -349,18 +351,7 @@ void VulkanGraphicsApp::initCommands(){
             vkCmdBindVertexBuffers(mCommandBuffers[i], 0, 1U, &mMultiShapeObjects[objIdx].getVertexBuffer(), std::array<VkDeviceSize, 1>{0}.data());
 
             // Bind uniforms to graphics pipeline if they exist with correct dynamic offset for this object instance
-            if(mMultiUniformBuffer->boundLayoutCount() > 0 || mSingleUniformBuffer.boundInterfaceCount() > 0){
-                vkCmdBindDescriptorSets(
-             /*command buffer to bind to*/  mCommandBuffers[i],
-             /*pipeline bind point*/        VK_PIPELINE_BIND_POINT_GRAPHICS,
-             /*vkpipelinelayout obj*/       mRenderPipeline.getLayout(),
-             /*firstSet*/                   0,
-             /*descriptorset count*/        1,
-             /*pDescriptorSets*/            &mUniformDescriptorSets[i],
-             /*dynamic offset count*/       mMultiUniformBuffer->dynamicOffsetCount(),
-             /*dynamic offsets array*/      mMultiUniformBuffer->getDynamicOffsets(objIdx)
-                );
-            }
+            
 
             // Bind index buffer for each shape and issue draw command.
             // The previous version of this code bound the index buffer with an offset of
@@ -374,8 +365,27 @@ void VulkanGraphicsApp::initCommands(){
             /*offset*/           0U,
             /*index type*/       VK_INDEX_TYPE_UINT32);
             for(size_t shapeIdx = 0; shapeIdx < mMultiShapeObjects[objIdx].shapeCount(); ++shapeIdx){
-                //
-                
+                auto val1 = mMultiUniformBuffer->dynamicOffsetCount();
+                auto val2 = mMultiUniformBuffer->getDynamicOffsets(objIdx);
+
+
+                // the dynamic offset argument is equivalent to 
+                // the index of the shape of the current model, plus all of the shapes that were drawn before it in this render pass. 
+                // It is used to index into the descriptor set for that particular shape, and bind it before drawing.
+                if (mMultiUniformBuffer->boundLayoutCount() > 0 || mSingleUniformBuffer.boundInterfaceCount() > 0) {
+                    vkCmdBindDescriptorSets(
+                        /*command buffer to bind to*/  mCommandBuffers[i],
+                        /*pipeline bind point*/        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        /*vkpipelinelayout obj*/       mRenderPipeline.getLayout(),
+                        /*firstSet*/                   0,
+                        /*descriptorset count*/        1,
+                        /*pDescriptorSets*/            &mUniformDescriptorSets[i],
+                        /*dynamic offset count*/       mMultiUniformBuffer->dynamicOffsetCount(),
+                        /*dynamic offsets array*/      mMultiUniformBuffer->getDynamicOffsets(mMultiShapeObjects[objIdx].descriptorSetPositions()[shapeIdx])
+                    );
+                }
+
+
                 vkCmdDrawIndexed(
                 /*command buffer*/   mCommandBuffers[i],
                 /*index count*/      mMultiShapeObjects[objIdx].getShapeRange(shapeIdx),
@@ -384,7 +394,7 @@ void VulkanGraphicsApp::initCommands(){
                 /*vertex offset*/    0U, //the value added to the vertex index before indexing into the vertex buffer
                 /*first instance*/   0U); //instance id of the first instance to draw.
             }
-            
+            totalShapeIdx += mMultiShapeObjects[objIdx].shapeCount();
         }
 
         vkCmdEndRenderPass(mCommandBuffers[i]);

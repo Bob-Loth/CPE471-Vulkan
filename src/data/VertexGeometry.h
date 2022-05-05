@@ -65,7 +65,7 @@ class MultiShapeGeometry : public IndexedVertexGeometry<VertexType, IndexType>
     using index_t = IndexType;
     using super_t = IndexedVertexGeometry<VertexType, IndexType>;
     using IndexedVertexGeometry<VertexType, IndexType>::IndexedVertexGeometry;
-
+    
     virtual ~MultiShapeGeometry() = default;
 
     virtual size_t getShapeOffset(size_t aShapeIndex) const {return(mShapeIndexBufferOffsets[aShapeIndex]);}
@@ -79,7 +79,8 @@ class MultiShapeGeometry : public IndexedVertexGeometry<VertexType, IndexType>
 
     /// Return the number of shapes. 
     virtual size_t shapeCount() const {return(mShapeIndexBufferOffsets.size());}
-
+    virtual const std::vector<size_t>& descriptorSetPositions() const { return mDescriptorSetPositions; }
+    virtual void setDescriptorSetPosition(size_t descriptorSetPosition) { mDescriptorSetPositions.push_back(descriptorSetPosition); }
     /// Add a new shape defined by drawing triangles indexed by 'aIndices'
     virtual void addShape(const std::vector<index_t>& aIndices) {
         mShapeIndexBufferOffsets.emplace_back(mIndicesConcat.size());
@@ -97,7 +98,8 @@ class MultiShapeGeometry : public IndexedVertexGeometry<VertexType, IndexType>
 
  protected:
     std::vector<size_t> mShapeIndexBufferOffsets;
-    std::vector<index_t> mIndicesConcat; 
+    std::vector<index_t> mIndicesConcat;
+    std::vector<size_t> mDescriptorSetPositions = std::vector<size_t>();
 };
 
 /// 'Frozen' version of MultiShapeGeometry. Deletes methods which modify the geometry and would require

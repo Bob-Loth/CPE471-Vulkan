@@ -89,7 +89,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     /// 'aUniformLayout' specifies the layout of uniform data available to all instances.
     void initMultis(const UniformDataLayoutSet& aUniformLayout);
     /// Add loaded obj and a set of interfaces for its uniform data
-    void addMultiShapeObject(const ObjMultiShapeGeometry& mObject, const UniformDataInterfaceSet& aUniformData);
+    void addMultiShapeObject(const ObjMultiShapeGeometry& mObject, const std::vector<UniformDataInterfaceSet>& aUniformData);
 
     void addSingleInstanceUniform(uint32_t aBindPoint, const UniformDataInterfacePtr& aUniformInterface);
 
@@ -143,7 +143,6 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     void initUniformDescriptorPool();
     void allocateDescriptorSets();
     void writeDescriptorSets();
-    void updateDescriptorSets();
     void reinitUniformResources();
 
     size_t mFrameNumber = 0;

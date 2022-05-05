@@ -47,6 +47,7 @@ class Application : public VulkanGraphicsApp
 
  protected:
     void initGeometry();
+    void addMultiShapeObjects();
     void initShaders();
     void initUniforms();
     void render(double dt);
@@ -287,7 +288,7 @@ void Application::render(double dt){
     //~hierarchy~static UniformTransformDataPtr bunnyTfs = mObjectTransforms["bunny"];
     //~hierarchy~static UniformTransformDataPtr teapotTfs = mObjectTransforms["teapot"];
     //~hierarchy~static UniformTransformDataPtr ballTfs = mObjectTransforms["ballTex"];
-    //~hierarchy~static UniformTransformDataPtr cubeTfs = mObjectTransforms["cube"];
+    static UniformTransformDataPtr cubeTfs = mObjectTransforms["cube"];
     
     //~hierarchy~static UniformTransformDataPtr lanternTfs = mObjectTransforms["lantern"];
     //~hierarchy~static UniformTransformDataPtr orientationTestTfs = mObjectTransforms["OrientationTest"];
@@ -304,7 +305,7 @@ void Application::render(double dt){
     //~hierarchy~ballTfs->getStruct().Model = glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
 
     // Spin the cube around above both the logo and the ball.
-    //~hierarchy~cubeTfs->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
+    cubeTfs->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
     
     // move the lantern into the background
     //~hierarchy~lanternTfs->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
@@ -361,7 +362,7 @@ void Application::initGeometry(){
     //~hierarchy~mObjects["bunny"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/bunny.obj");
     //~hierarchy~mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
     //~hierarchy~mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
-    //~hierarchy~mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf", false);
+    mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf", false);
     
     //~hierarchy~mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf", false);
     //~hierarchy~mObjects["OrientationTest"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "OrientationTest/OrientationTest.glb", true);
@@ -377,7 +378,7 @@ void Application::initGeometry(){
     //~hierarchy~mObjectTransforms["bunny"] = UniformTransformData::create();
     //~hierarchy~mObjectTransforms["teapot"] = UniformTransformData::create();
     //~hierarchy~mObjectTransforms["ballTex"] = UniformTransformData::create();
-    //~hierarchy~mObjectTransforms["cube"] = UniformTransformData::create();
+    mObjectTransforms["cube"] = UniformTransformData::create();
     
     //~hierarchy~mObjectTransforms["lantern"] = UniformTransformData::create();
     //~hierarchy~mObjectTransforms["OrientationTest"] = UniformTransformData::create();
@@ -390,7 +391,7 @@ void Application::initGeometry(){
     //~hierarchy~mObjectAnimShade["bunny"] = UniformAnimShadeData::create();
     //~hierarchy~mObjectAnimShade["teapot"] = UniformAnimShadeData::create();
     //~hierarchy~mObjectAnimShade["ballTex"] = UniformAnimShadeData::create();
-    //~hierarchy~mObjectAnimShade["cube"] = UniformAnimShadeData::create();
+    mObjectAnimShade["cube"] = UniformAnimShadeData::create();
     
     //~hierarchy~mObjectAnimShade["lantern"] = UniformAnimShadeData::create();
     //~hierarchy~mObjectAnimShade["OrientationTest"] = UniformAnimShadeData::create();
@@ -408,7 +409,7 @@ void Application::initGeometry(){
     //~hierarchy~mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
     //~hierarchy~mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
     //~hierarchy~mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
-    //~hierarchy~mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
+    mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
     
     //~hierarchy~mObjectAnimShade["lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
     //~hierarchy~mObjectAnimShade["CesiumMilkTruck"]->setStruct(AnimShadeData(TEXTURED_SHADED, 5));
@@ -420,6 +421,8 @@ void Application::initGeometry(){
     recordShadingLayers();
     // Add object to the scene along with its uniform data
     
+    
+
     //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(
     //~hierarchy~    mObjects["vulkan"], // The object
     //~hierarchy~
@@ -437,13 +440,35 @@ void Application::initGeometry(){
     //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["bunny"], {{1, mObjectTransforms["bunny"]}, {2, mObjectAnimShade["bunny"]}});
     //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["teapot"], {{1, mObjectTransforms["teapot"]}, {2, mObjectAnimShade["teapot"]}});
     //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["ballTex"], { {1, mObjectTransforms["ballTex"]}, {2, mObjectAnimShade["ballTex"]}});
-    //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["cube"], { {1, mObjectTransforms["cube"]}, {2, mObjectAnimShade["cube"]} });
     
     //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["lantern"], { {1, mObjectTransforms["lantern"]}, {2, mObjectAnimShade["lantern"]} });
     //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["OrientationTest"], { {1, mObjectTransforms["OrientationTest"]}, {2, mObjectAnimShade["OrientationTest"]} });
     //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["CesiumMilkTruck"], { {1, mObjectTransforms["CesiumMilkTruck"]}, {2, mObjectAnimShade["CesiumMilkTruck"]} });
     //~hierarchy~VulkanGraphicsApp::addMultiShapeObject(mObjects["Buggy"], { {1, mObjectTransforms["Buggy"]}, {2, mObjectAnimShade["Buggy"]} });
-    VulkanGraphicsApp::addMultiShapeObject(mObjects["dummy"], { {1, mObjectTransforms["dummy"]}, {2, mObjectAnimShade["dummy"]} });
+    addMultiShapeObjects();
+    
+
+}
+
+void Application::addMultiShapeObjects() {
+    
+    size_t totalShapesAdded = 0;
+    size_t previousDescriptorSetPosition = 0;
+    //for each multiShapeObject
+    for (std::pair<string, ObjMultiShapeGeometry> object : mObjects) {
+        string name = object.first;
+        vector<UniformDataInterfaceSet> sets;
+        //for each shape in that object
+        for (int i = 0; i < mObjects[name].shapeCount(); i++) {
+            sets.push_back({ {1, mObjectTransforms[name]}, {2, mObjectAnimShade[name]} });
+            //this keeps track of where in the vector of descriptor sets the particular shape's descriptor set data was inserted into.
+            mObjects[name].setDescriptorSetPosition(i + previousDescriptorSetPosition);
+        }
+
+        previousDescriptorSetPosition += sets.size(); //the position we will be inserting into in the next iteration of the outer loop.
+        //our insertion helper vector "sets" gets destroyed every loop, hence the +=.
+        VulkanGraphicsApp::addMultiShapeObject(mObjects[name], sets);
+    }
 }
 
 /// Initialize our shaders
