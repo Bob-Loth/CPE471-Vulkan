@@ -359,12 +359,10 @@ void Application::loadShapeFilesFromPath(string dir) {
                 mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), false);
                 mObjectNames.push_back(filenameNoExt);
             }
-                
             else if (isGLB(entry.path())) {
                 mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), true);
                 mObjectNames.push_back(filenameNoExt);
             }
-                
             else if (isOBJ(entry.path())) {
                 mObjects[filenameNoExt] = load_obj_to_vulkan(getPrimaryDeviceBundle(), entry.path().string());
                 mObjectNames.push_back(filenameNoExt);
@@ -378,7 +376,7 @@ void Application::loadShapeFilesFromPath(string dir) {
 }
 
 void Application::initGeometry(){
-    // Load all shape files 
+    // Load all shape files. This is what pushes filenames to mObjectNames.
     loadShapeFilesFromPath(STRIFY(ASSET_DIR));
 
     // Create new uniform data for each object
@@ -405,6 +403,7 @@ void Application::initGeometry(){
     mObjectAnimShade["dummy"]->setStruct(BlPhColors["purple"]);
 
     //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
+    //Can remove all of the shading layer code if you are not using the debug shader.
     recordShadingLayers();
 
     // Add objects to the scene along with its uniform data
@@ -419,7 +418,7 @@ void Application::addMultiShapeObjects() {
     for (std::pair<string, ObjMultiShapeGeometry> object : mObjects) {
         string name = object.first;
         vector<UniformDataInterfaceSet> sets;
-        //for each shape in that object
+        //for each shape in that object. Change
         for (int i = 0; i < mObjects[name].shapeCount(); i++) {
             sets.push_back({ {1, mObjectTransforms[name]}, {2, mObjectAnimShade[name]} });
             //this keeps track of where in the vector of descriptor sets the particular shape's descriptor set data was inserted into.

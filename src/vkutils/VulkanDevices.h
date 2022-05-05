@@ -1,7 +1,7 @@
 #ifndef VULKAN_DEVICES_H_
 #define VULKAN_DEVICES_H_
 #include <vulkan/vulkan.h>
-#include "optional.h"
+#include <optional>
 #include <vector>
 #include <stdexcept>
 #include <limits>
@@ -87,7 +87,7 @@ class VulkanPhysicalDevice
 
    SwapChainSupportInfo getSwapChainSupportInfo(const VkSurfaceKHR aSurface) const;
 
-   opt::optional<uint32_t> getPresentableQueueIndex(const VkSurfaceKHR aSurface) const;
+   std::optional<uint32_t> getPresentableQueueIndex(const VkSurfaceKHR aSurface) const;
    
    VulkanLogicalDevice createLogicalDevice(
       VkQueueFlags aQueues,
@@ -107,14 +107,14 @@ class VulkanPhysicalDevice
    std::vector<QueueFamily> mQueueFamilies;
    std::vector<VkExtensionProperties> mAvailableExtensions;
 
-   opt::optional<uint32_t> mGraphicsIdx;
-   opt::optional<uint32_t> mComputeIdx;
-   opt::optional<uint32_t> mTransferIdx;
-   opt::optional<uint32_t> mProtectedIdx;
-   opt::optional<uint32_t> mSparseBindIdx;
+   std::optional<uint32_t> mGraphicsIdx;
+   std::optional<uint32_t> mComputeIdx;
+   std::optional<uint32_t> mTransferIdx;
+   std::optional<uint32_t> mProtectedIdx;
+   std::optional<uint32_t> mSparseBindIdx;
 
    // Index of queue supporting graphics, compute, transfer, and presentation
-   opt::optional<uint32_t> coreFeaturesIdx; 
+   std::optional<uint32_t> coreFeaturesIdx; 
 
    operator VkPhysicalDevice() const {return(mHandle);}
 
