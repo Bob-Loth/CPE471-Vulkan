@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.10)
 set(VKUTILS_LIBRARY_NAME "vkutils")
 
 # Uncomment to force use of c++ 17
-# set(CMAKE_CXX_STANDARD_REQUIRED 17)
-# set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED 17)
+set(CMAKE_CXX_STANDARD 17)
 
 # Find Vulkan
 find_package(Vulkan REQUIRED)
