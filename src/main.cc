@@ -192,13 +192,9 @@ void Application::init(){
     initGeometry();
     // Initialize shaders
     initShaders();
-    
 
-    
     // Initialize graphics pipeline and render setup 
     VulkanGraphicsApp::init();
-    
-
 }
 
 void Application::run(){
