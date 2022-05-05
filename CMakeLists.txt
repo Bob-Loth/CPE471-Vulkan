@@ -5,9 +5,9 @@ include("${CMAKE_SOURCE_DIR}/VkShaderCompile.cmake")
 # Name of the project
 project(VulkanOBJ)
 
-# Enforce use of C++14
-set(CMAKE_CXX_STANDARD_REQUIRED 14)
-set(CMAKE_CXX_STANDARD 14)
+# Enforce use of C++17
+set(CMAKE_CXX_STANDARD_REQUIRED 17)
+set(CMAKE_CXX_STANDARD 17)
 
 set(VK_ALLOC_LIB_TARGET "vk_mem_alloc")
 add_library(${VK_ALLOC_LIB_TARGET} STATIC "${PROJECT_SOURCE_DIR}/ext/vk_mem_alloc.h" "${PROJECT_SOURCE_DIR}/ext/vma_impl.cc" "src/load_texture.h" "ext/stb_image.h")
