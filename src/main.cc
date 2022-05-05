@@ -48,13 +48,15 @@ class Application : public VulkanGraphicsApp
     static void keyCallback(GLFWwindow* aWindow, int key, int scancode, int action, int mods);
 
  protected:
-    void initGeometry();
+     void loadShapeFilesFromPath(string path);
+     void initGeometry();
     void addMultiShapeObjects();
     void initShaders();
     void initUniforms();
     void render(double dt);
 
-    
+    //names of the loaded shapefiles.
+    std::vector<string> mObjectNames;
     //holds the original state of each of the object's shading layer
     std::unordered_map<std::string, ShadingLayer> mKeyCallbackHolds;
     
@@ -289,10 +291,10 @@ void Application::render(double dt){
     mObjectTransforms["ballTex"]->getStruct().Model = glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
 
     // Spin the cube around above both the logo and the ball.
-    mObjectTransforms["cube"]->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
+    mObjectTransforms["Cube"]->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
     
     // move the lantern into the background
-    mObjectTransforms["lantern"]->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
+    mObjectTransforms["Lantern"]->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
 
     mObjectTransforms["OrientationTest"]->getStruct().Model = glm::translate(vec3(0.0, 4.0, -4.0)) * glm::rotate(glm::radians(45.0f), vec3(0,1,1)) * glm::scale(vec3(0.1));
     mObjectTransforms["CesiumMilkTruck"]->getStruct().Model = glm::translate(vec3(0.0, -4.0, -4.0)) * glm::scale(vec3(0.5));
@@ -304,7 +306,7 @@ void Application::render(double dt){
     constexpr float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
     float radius = 4.5f;
     
-    mObjectTransforms["monkey"]->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*0), .2f*sin(gt*4.0f+angle*0), sin(angle*0))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
+    mObjectTransforms["suzanne"]->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*0), .2f*sin(gt*4.0f+angle*0), sin(angle*0))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
     mObjectTransforms["bunny"]->getStruct().Model  = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*1), .2f*sin(gt*4.0f+angle*1), sin(angle*1))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
     mObjectTransforms["teapot"]->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*2), .2f*sin(gt*4.0f+angle*2), sin(angle*2))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
     
@@ -338,45 +340,65 @@ void initBlinnPhongColorMap(unordered_map<string, AnimShadeData> *map) {
     (*map)["white"] = AnimShadeData();
 }
 
-void Application::initGeometry(){
-    // Load obj files 
-    
-    //a mix of .obj and .gltf and .glb files. An improvement to this would involve using std::filesystem's path.extension.
-    
+// loads all .gltf, .glb, and .obj files found in "dir" and its subdirectories into mObjects.
+// If you don't want to do this, you have a few options:
+// 1. don't use this function, and instead manually load the shapefiles of your choosing using the load_x_to_vulkan functions.
+// 2. Create specific omissions/permissions by modifying the lambda functions.
+// 3. put any shape files you aren't using in your asset directory into a "junk" folder, and check if the entry.path().string() is equivalent to that junk folder's name
+void Application::loadShapeFilesFromPath(string dir) {
+    auto isGLTF = [](fs::path de) {return de.extension() == ".gltf"; };
+    auto isGLB = [](fs::path de) {return de.extension() == ".glb"; };
+    auto isOBJ = [](fs::path de) {return de.extension() == ".obj"; };
+    for (const auto& entry : fs::directory_iterator(dir)) {
+        cout << entry.path() << endl;
 
-    mObjects["vulkan"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/vulkan.obj");
-    mObjects["monkey"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/suzanne.obj");
-    mObjects["bunny"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/bunny.obj");
-    mObjects["teapot"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/teapot.obj");
-    mObjects["ballTex"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/ballTex.obj");
-    mObjects["cube"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Cube/Cube.gltf", false);
-    
-    mObjects["lantern"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Lantern/Lantern.gltf", false);
-    mObjects["OrientationTest"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "OrientationTest/OrientationTest.glb", true);
-    mObjects["CesiumMilkTruck"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "CesiumMilkTruck/CesiumMilkTruck.glb", true);
-    mObjects["Buggy"] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "Buggy/Buggy.glb", true);
-    mObjects["dummy"] = load_obj_to_vulkan(getPrimaryDeviceBundle(), STRIFY(ASSET_DIR) "/dummy.obj");
-    
+        if (entry.is_regular_file()) {
+            string filenameNoExt = entry.path().stem().string();
+           
+            if (isGLTF(entry.path())) {
+                mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), false);
+                mObjectNames.push_back(filenameNoExt);
+            }
+                
+            else if (isGLB(entry.path())) {
+                mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), true);
+                mObjectNames.push_back(filenameNoExt);
+            }
+                
+            else if (isOBJ(entry.path())) {
+                mObjects[filenameNoExt] = load_obj_to_vulkan(getPrimaryDeviceBundle(), entry.path().string());
+                mObjectNames.push_back(filenameNoExt);
+            }
+                
+        }
+        else if (entry.is_directory()) { //depth first
+            loadShapeFilesFromPath(entry.path().string());
+        }
+    }
+}
+
+void Application::initGeometry(){
+    // Load all shape files 
+    loadShapeFilesFromPath(STRIFY(ASSET_DIR));
 
     // Create new uniform data for each object
-    for (string name : {"vulkan", "monkey", "bunny", "teapot", "ballTex", "cube", "lantern", "OrientationTest", "CesiumMilkTruck", "Buggy", "dummy"}) {
+    for (string name : mObjectNames) {
         mObjectTransforms[name] = UniformTransformData::create();
         mObjectAnimShade[name] = UniformAnimShadeData::create();
     }
 
-    //Make a color map
+    //Make a color map. You can either improve on this, or throw it away and use something more sophisticated.
     auto BlPhColors = unordered_map<string, AnimShadeData>();
     initBlinnPhongColorMap(&BlPhColors);
 
-    //set uniform shading data to colors defined in color map, or to some texture.
-    
+    //set uniform shading data to colors defined in color map, or to some texture. The key is the name of the file, without the extension.
     mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
     mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
-    mObjectAnimShade["monkey"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
+    mObjectAnimShade["suzanne"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
     mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
-    mObjectAnimShade["cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
+    mObjectAnimShade["Cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
     
-    mObjectAnimShade["lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
+    mObjectAnimShade["Lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
     mObjectAnimShade["CesiumMilkTruck"]->setStruct(AnimShadeData(TEXTURED_SHADED, 5));
     mObjectAnimShade["Buggy"]->setStruct(BlPhColors["white"]);
     mObjectAnimShade["OrientationTest"]->setStruct(BlPhColors["purple"]);
