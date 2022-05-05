@@ -606,57 +606,6 @@ void VulkanGraphicsApp::allocateDescriptorSets() {
     }
 }
 
-void VulkanGraphicsApp::updateDescriptorSets() {
-    std::map<uint32_t, VkDescriptorBufferInfo> bufferInfos = merge(mSingleUniformBuffer.getDescriptorBufferInfos(), mMultiUniformBuffer->getDescriptorBufferInfos());
-    uint32_t imageDescriptorNumber = bufferInfos.size();
-
-    std::array<VkDescriptorImageInfo,TextureLoader::TEXTURE_ARRAY_SIZE> imageInfos = textureLoader.getDescriptorImageInfos();
-    std::vector<VkWriteDescriptorSet> setWriters;
-
-    setWriters.reserve(mUniformDescriptorSets.size() * (bufferInfos.size() + imageInfos.size()));
-    VkBuffer staticUB = mSingleUniformBuffer.handle();
-    
-    for (VkDescriptorSet descriptorSet : mUniformDescriptorSets) {
-
-        //emplace all of the VkDescriptorBufferInfos.
-        for (const auto& info : bufferInfos) {
-
-            setWriters.emplace_back(
-                VkWriteDescriptorSet{
-                    /* sType = */ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    /* pNext = */ nullptr,
-                    /* dstSet = */ descriptorSet,
-                    /* dstBinding = */ info.first,
-                    /* dstArrayElement = */ 0,
-                    /* descriptorCount = */ 1,
-                    /* descriptorType = */ (info.second.buffer == staticUB) ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-                    /* pImageInfo = */ nullptr,
-                    /* pBufferInfo = */ &info.second,
-                    /* pTexelBufferView = */ nullptr
-                }
-            );
-        }
-        //finally, emplace the VkDescriptorImageInfo.
-        setWriters.emplace_back(
-            VkWriteDescriptorSet{
-                /* sType = */ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                /* pNext = */ nullptr,
-                /* dstSet = */ descriptorSet,
-                /* dstBinding = */ imageDescriptorNumber,
-                /* dstArrayElement = */ 0,
-                /* descriptorCount = */ TextureLoader::TEXTURE_ARRAY_SIZE,
-                /* descriptorType = */ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                /* pImageInfo = */ imageInfos.data(),
-                /* pBufferInfo = */nullptr,
-                /* pTexelBufferView = */ nullptr
-            }
-        );
-        
-    }
-    vkUpdateDescriptorSets(getPrimaryDeviceBundle().logicalDevice, setWriters.size(), setWriters.data(), 0, nullptr);
-}
-
-
 void VulkanGraphicsApp::writeDescriptorSets(){
     std::map<uint32_t, VkDescriptorBufferInfo> bufferInfos = merge(mSingleUniformBuffer.getDescriptorBufferInfos(), mMultiUniformBuffer->getDescriptorBufferInfos());
     uint32_t imageDescriptorNumber = bufferInfos.size();
