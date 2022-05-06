@@ -6,7 +6,6 @@ layout(location = 1) in vec4 vertCol;
 layout(location = 0) out vec4 fragVtxColor;
 
 //the final transform for this node in the gltf graph. Identity matrix for .obj files.
-
 layout(binding = 0) uniform Transform{
     mat4 Model;
 } uModel;
