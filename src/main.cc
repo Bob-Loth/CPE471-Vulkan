@@ -86,6 +86,7 @@ class Application : public VulkanGraphicsApp
     void addMultiShapeObjects();
     void initShaders();
     void initUniforms();
+    void initHierarchies();
     void render(double dt);
 
     //names of the loaded shapefiles.
@@ -93,6 +94,9 @@ class Application : public VulkanGraphicsApp
     //holds the original state of each of the object's shading layer
     std::unordered_map<std::string, vector<ShadingLayer>> mKeyCallbackHolds;
     
+    //used to describe a user-defined hierarchy of a multishape object.
+    std::unordered_map<std::string, vector<MatrixNode>> mObjectHierarchies;
+
     /// An wrapped instance of struct WorldInfo made available automatically as uniform data in our shaders.
     UniformWorldInfoPtr mWorldInfo = nullptr;
 
@@ -217,6 +221,42 @@ int main(){
     return(0);
 }
 
+void Application::initHierarchies() {
+    vector<MatrixNode> dummyTfs = createVectorOfMatrixNodes(mObjects["dummy"].shapeCount());
+    //give hips a base transform.
+    glm::mat4 baseMatrix = glm::translate(glm::vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>() / 2, glm::vec3(-1.0, 0.0, 0.0)) * glm::scale(glm::vec3(1.0 / 25.0));
+    dummyTfs[12].localModelMatrix = baseMatrix; //this is the root node, so it has no parent. Additional nodes should set a parent node that they will inherit transforms from.
+    //set belly, L+R pelvis to be children of hips.
+    dummyTfs[13].parent = dummyTfs[11].parent = dummyTfs[5].parent = 12;
+    //set each of the legs.
+    //right leg.
+    for (int i = 4; i >= 0; --i) {
+        dummyTfs[i].parent = i + 1;
+    }
+    //left leg.
+    for (int i = 10; i >= 6; --i) {
+        dummyTfs[i].parent = i + 1;
+    }
+    //start setting up things in the upper body.
+    // belly -> torso--> neck -> head
+    dummyTfs[14].parent = 13;
+    dummyTfs[27].parent = 14;
+    dummyTfs[28].parent = 27;
+
+    //attach the shoulders to the torso.
+    dummyTfs[21].parent = dummyTfs[15].parent = 14;
+    //               |-> rshoulder -> bicep -> elbow -> forearm -> wrist -> hand
+    for (int i = 20; i >= 16; --i) {
+        dummyTfs[i].parent = i - 1;
+    }
+    //               |-> lshoulder -> bicep -> elbow -> forearm -> wrist -> hand
+    for (int i = 26; i >= 22; --i) {
+        dummyTfs[i].parent = i - 1;
+    }
+    //now that we've defined the relationship between each of the multishape objects, send it to the rest of the application.
+    mObjectHierarchies["dummy"] = dummyTfs;
+}
+
 void Application::init(){
 
     // Set glfw callbacks
@@ -230,6 +270,8 @@ void Application::init(){
     initGeometry();
     // Initialize shaders
     initShaders();
+
+    initHierarchies();
 
     // Initialize graphics pipeline and render setup 
     VulkanGraphicsApp::init();
@@ -328,9 +370,9 @@ void Application::render(double dt){
         }
     };
 
-    auto setHierarchicalTransformData = [this](string name, vector<MatrixNode> tree) {
+    auto setHierarchicalTransformData = [this](string name) {
         for (size_t i = 0; i < mObjects[name].shapeCount(); ++i) {
-            mObjectTransforms[name][i]->getStruct().Model = computeCTM(tree, i);
+            mObjectTransforms[name][i]->getStruct().Model = computeCTM(mObjectHierarchies[name], i);
         }
     };
 
@@ -353,40 +395,7 @@ void Application::render(double dt){
     setAllObjectTransformData("Buggy", glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05)));
 
     //position dummy. Refer to Dummy Labels.png in the asset directory for correct indices.
-    vector<MatrixNode> dummyTfs = createVectorOfMatrixNodes(mObjects["dummy"].shapeCount());
-    //give hips a base transform.
-    glm::mat4 baseMatrix = glm::translate(vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>() / 2, vec3(-1.0, 0.0, 0.0)) * glm::scale(vec3(1.0 / 25.0));
-    dummyTfs[12].localModelMatrix = baseMatrix; //this is the root node, so it has no parent. Additional nodes should set a parent node that they will inherit transforms from.
-    //set belly, L+R pelvis to be children of hips.
-    dummyTfs[13].parent = dummyTfs[11].parent = dummyTfs[5].parent = 12;
-    //set each of the legs.
-    //right leg.
-    for (int i = 4; i >= 0; --i) {
-        dummyTfs[i].parent = i + 1;
-    }
-    //left leg.
-    for (int i = 10; i >= 6; --i) {
-        dummyTfs[i].parent = i + 1;
-    }
-    //start setting up things in the upper body.
-    // belly -> torso--> neck -> head
-    dummyTfs[14].parent = 13;
-    dummyTfs[27].parent = 14;
-    dummyTfs[28].parent = 27;
-
-    //attach the shoulders.
-    dummyTfs[21].parent = dummyTfs[15].parent = 14;
-    //               |-> rshoulder -> bicep -> elbow -> forearm -> wrist -> hand
-    for (int i = 20; i >= 16; --i) {
-        dummyTfs[i].parent = i - 1;
-    }
-    //               |-> lshoulder -> bicep -> elbow -> forearm -> wrist -> hand
-    for (int i = 26; i >= 22; --i) {
-        dummyTfs[i].parent = i - 1;
-    }
-    
-
-    setHierarchicalTransformData("dummy", dummyTfs);
+    setHierarchicalTransformData("dummy");
     
 
     // Rotate all other objects around the Vulkan logo in the center
