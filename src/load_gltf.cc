@@ -268,4 +268,37 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
         }
     }
     ivGeoOut.setVertices(objVertices);
+    // return a vector containing a vec3 describing the center of each shape's bounding box, for every shape in a multishape object.
+    
+    std::vector<glm::vec3> centers;
+    auto offsets = ivGeoOut.mShapeIndexBufferOffsets;
+    auto indices = ivGeoOut.mIndicesConcat;
+    for (int i = 0; i < ivGeoOut.shapeCount(); ++i) {
+        size_t offset = ivGeoOut.getShapeOffset(i);
+        size_t range = ivGeoOut.getShapeRange(i);
+        
+        
+        float minX, minY, minZ;
+        float maxX, maxY, maxZ;
+        minX = minY = minZ = FLT_MAX;
+        maxX = maxY = maxZ = -FLT_MAX;
+        for (int j = offset; j < range; ++j) {
+            if (objVertices[indices[j]].position.x < minX) minX = objVertices[indices[j]].position.x;
+            if (objVertices[indices[j]].position.x > maxX) maxX = objVertices[indices[j]].position.x;
+
+            if (objVertices[indices[j]].position.y < minY) minY = objVertices[indices[j]].position.y;
+            if (objVertices[indices[j]].position.y > maxY) maxY = objVertices[indices[j]].position.y;
+            
+            if (objVertices[indices[j]].position.z < minZ) minZ = objVertices[indices[j]].position.z;
+            if (objVertices[indices[j]].position.z > maxZ) maxZ = objVertices[indices[j]].position.z;
+        }
+        centers.emplace_back(
+            glm::vec3(
+                (minX + maxX) / 2,
+                (minY + maxY) / 2,
+                (minZ + maxZ) / 2
+            )
+        );
+    }
+    ivGeoOut.setBBoxCenters(centers);
 }

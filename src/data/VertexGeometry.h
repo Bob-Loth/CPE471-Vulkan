@@ -11,6 +11,7 @@
 #include <exception>
 #include <stdexcept>
 #include <cstring>
+#include <glm/glm.hpp>
 
 template<typename VertexType, typename IndexType = uint32_t>
 class IndexedVertexGeometry : public virtual UploadTransferBackedBufferInterface
@@ -76,7 +77,8 @@ class MultiShapeGeometry : public IndexedVertexGeometry<VertexType, IndexType>
             return(mShapeIndexBufferOffsets[aShapeIndex+1] - mShapeIndexBufferOffsets[aShapeIndex]);
         }
     }
-
+    
+    
     /// Return the number of shapes. 
     virtual size_t shapeCount() const {return(mShapeIndexBufferOffsets.size());}
     virtual const std::vector<size_t>& descriptorSetPositions() const { return mDescriptorSetPositions; }
@@ -95,10 +97,13 @@ class MultiShapeGeometry : public IndexedVertexGeometry<VertexType, IndexType>
 
     virtual void freeStagingBuffer() override {super_t::freeStagingBuffer();}
     virtual void freeAndReset() override {super_t::freeAndReset(); mShapeIndexBufferOffsets.clear(); mIndicesConcat.clear();}
-
- protected:
+    const std::vector<glm::vec3> BBoxCenters() const { return mBBoxCenters; }
+    void setBBoxCenters(std::vector<glm::vec3> centers) { mBBoxCenters = centers; }
     std::vector<size_t> mShapeIndexBufferOffsets;
     std::vector<index_t> mIndicesConcat;
+    
+ protected:
+    std::vector<glm::vec3> mBBoxCenters;
     std::vector<size_t> mDescriptorSetPositions = std::vector<size_t>();
 };
 

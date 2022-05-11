@@ -55,6 +55,8 @@ struct ObjVertex {
 using ObjMultiShapeGeometry = MultiShapeGeometry<ObjVertex, uint32_t>;
 using ObjVertexInput = VertexInputTemplate<ObjVertex>;
 
+
+
 const static ObjVertexInput sObjVertexInput(
     0, // Binding point 
     { // Vertex input attributes

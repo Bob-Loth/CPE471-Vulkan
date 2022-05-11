@@ -223,6 +223,7 @@ int main(){
 
 void Application::initHierarchies() {
     vector<MatrixNode> dummyTfs = createVectorOfMatrixNodes(mObjects["dummy"].shapeCount());
+    vector<glm::vec3> boxes = mObjects["dummy"].BBoxCenters();
     //give hips a base transform.
     glm::mat4 baseMatrix = glm::translate(glm::vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>() / 2, glm::vec3(-1.0, 0.0, 0.0)) * glm::scale(glm::vec3(1.0 / 25.0));
     dummyTfs[12].localModelMatrix = baseMatrix; //this is the root node, so it has no parent. Additional nodes should set a parent node that they will inherit transforms from.
@@ -395,6 +396,7 @@ void Application::render(double dt){
     setAllObjectTransformData("Buggy", glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05)));
 
     //position dummy. Refer to Dummy Labels.png in the asset directory for correct indices.
+    
     setHierarchicalTransformData("dummy");
     
 
