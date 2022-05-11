@@ -58,7 +58,7 @@ class Application : public VulkanGraphicsApp
     //names of the loaded shapefiles.
     std::vector<string> mObjectNames;
     //holds the original state of each of the object's shading layer
-    std::unordered_map<std::string, ShadingLayer> mKeyCallbackHolds;
+    std::unordered_map<std::string, vector<ShadingLayer>> mKeyCallbackHolds;
     
     /// An wrapped instance of struct WorldInfo made available automatically as uniform data in our shaders.
     UniformWorldInfoPtr mWorldInfo = nullptr;
@@ -83,18 +83,23 @@ void Application::scrollCallback(GLFWwindow* aWindow, double aXOffset, double aY
 
 void Application::recordShadingLayers() {
     for (auto& obj : mObjectAnimShade) {
-        mKeyCallbackHolds[obj.first] = static_cast<ShadingLayer>(obj.second->getStruct().shadingLayer);
+        for (int i = 0; i < obj.second.size(); i++) {
+            mKeyCallbackHolds[obj.first].push_back(static_cast<ShadingLayer>(obj.second[i]->getStruct().shadingLayer));
+        }
     }
 }
 
 void Application::observeCurrentShadingLayer() {
     for (auto& obj : mObjectAnimShade) {
-        if (currentShadingLayer == NO_FORCED_LAYER) { //revert to each object's original layer
-            obj.second->getStruct().shadingLayer = mKeyCallbackHolds[obj.first];
+        for (int i = 0; i < obj.second.size(); i++) {
+            if (currentShadingLayer == NO_FORCED_LAYER) { //revert to each object's original layer
+                obj.second[i]->getStruct().shadingLayer = mKeyCallbackHolds[obj.first][i];
+            }
+            else { //observe and apply the current shading layer to all objects
+                obj.second[i]->getStruct().shadingLayer = currentShadingLayer;
+            }
         }
-        else { //observe and apply the current shading layer to all objects
-            obj.second->getStruct().shadingLayer = currentShadingLayer;
-        }
+        
     }
 }
 
@@ -273,6 +278,8 @@ void Application::cleanup(){
     VulkanGraphicsApp::cleanup();
 }
 
+
+
 /// Animate the objects within our scene and then render it. 
 void Application::render(double dt){
     using glm::sin;
@@ -281,30 +288,41 @@ void Application::render(double dt){
     // Global time
     float gt = static_cast<float>(glfwGetTime());
     
+    //use this to set all transform data for all shapes in a given multi-shape object.
+    auto setAllObjectTransformData = [this](string name, glm::mat4 M) {
+        for (size_t i = 0; i < mObjects[name].shapeCount(); ++i) {
+            mObjectTransforms[name][i]->getStruct().Model = M;
+        }
+    };
+
     // Spin the logo in place. 
-    mObjectTransforms["vulkan"]->getStruct().Model = glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0));
+    setAllObjectTransformData("vulkan", glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0)));
+    
     // Spin the ball opposite direction of logo, above it.
-    mObjectTransforms["ballTex"]->getStruct().Model = glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0));
+    setAllObjectTransformData("ballTex", glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)));
 
     // Spin the cube around above both the logo and the ball.
-    mObjectTransforms["Cube"]->getStruct().Model = glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1));
+    setAllObjectTransformData("Cube", glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1)));
+    
     
     // move the lantern into the background
-    mObjectTransforms["Lantern"]->getStruct().Model = glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2));
+    setAllObjectTransformData("Lantern", glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2)));
+    
 
-    mObjectTransforms["OrientationTest"]->getStruct().Model = glm::translate(vec3(0.0, 4.0, -4.0)) * glm::rotate(glm::radians(45.0f), vec3(0,1,1)) * glm::scale(vec3(0.1));
-    mObjectTransforms["CesiumMilkTruck"]->getStruct().Model = glm::translate(vec3(0.0, -4.0, -4.0)) * glm::scale(vec3(0.5));
-    mObjectTransforms["Buggy"]->getStruct().Model = glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05));
+    setAllObjectTransformData("OrientationTest", glm::translate(vec3(0.0, 4.0, -4.0)) * glm::rotate(glm::radians(45.0f), vec3(0, 1, 1)) * glm::scale(vec3(0.1)));
+    setAllObjectTransformData("CesiumMilkTruck", glm::translate(vec3(0.0, -4.0, -4.0)) * glm::scale(vec3(0.5)));
+    setAllObjectTransformData("Buggy", glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05)));
+
     //position dummy
-    mObjectTransforms["dummy"]->getStruct().Model = glm::translate(vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>()/2, vec3(-1.0, 0.0, 0.0)) * glm::scale(vec3(1.0/25.0));
+    setAllObjectTransformData("dummy", glm::translate(vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>() / 2, vec3(-1.0, 0.0, 0.0)) * glm::scale(vec3(1.0 / 25.0)));
+    
 
     // Rotate all other objects around the Vulkan logo in the center
     constexpr float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
     float radius = 4.5f;
-    
-    mObjectTransforms["suzanne"]->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*0), .2f*sin(gt*4.0f+angle*0), sin(angle*0))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
-    mObjectTransforms["bunny"]->getStruct().Model  = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*1), .2f*sin(gt*4.0f+angle*1), sin(angle*1))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
-    mObjectTransforms["teapot"]->getStruct().Model = glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius*vec3(cos(angle*2), .2f*sin(gt*4.0f+angle*2), sin(angle*2))) * glm::rotate(2.0f*float(gt), vec3(0.0, 1.0, 0.0));
+    setAllObjectTransformData("suzanne", glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius * vec3(cos(angle * 0), .2f * sin(gt * 4.0f + angle * 0), sin(angle * 0))) * glm::rotate(2.0f * float(gt), vec3(0.0, 1.0, 0.0)));
+    setAllObjectTransformData("bunny", glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius * vec3(cos(angle * 1), .2f * sin(gt * 4.0f + angle * 1), sin(angle * 1))) * glm::rotate(2.0f * float(gt), vec3(0.0, 1.0, 0.0)));
+    setAllObjectTransformData("teapot", glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius * vec3(cos(angle * 2), .2f * sin(gt * 4.0f + angle * 2), sin(angle * 2))) * glm::rotate(2.0f * float(gt), vec3(0.0, 1.0, 0.0)));
     
     // Tell the GPU to render a frame. 
     VulkanGraphicsApp::render();
@@ -346,20 +364,22 @@ void Application::loadShapeFilesFromPath(string dir) {
     auto isGLB = [](fs::path de) {return de.extension() == ".glb"; };
     auto isOBJ = [](fs::path de) {return de.extension() == ".obj"; };
     for (const auto& entry : fs::directory_iterator(dir)) {
-        cout << entry.path() << endl;
 
         if (entry.is_regular_file()) {
             string filenameNoExt = entry.path().stem().string();
            
             if (isGLTF(entry.path())) {
+                cout << "loading .gltf file: " << entry.path() << endl;
                 mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), false);
                 mObjectNames.push_back(filenameNoExt);
             }
             else if (isGLB(entry.path())) {
+                cout << "loading .glb file: " << entry.path() << endl;
                 mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), true);
                 mObjectNames.push_back(filenameNoExt);
             }
             else if (isOBJ(entry.path())) {
+                cout << "loading .obj file: " << entry.path() << endl;
                 mObjects[filenameNoExt] = load_obj_to_vulkan(getPrimaryDeviceBundle(), entry.path().string());
                 mObjectNames.push_back(filenameNoExt);
             }
@@ -377,26 +397,40 @@ void Application::initGeometry(){
 
     // Create new uniform data for each object
     for (string name : mObjectNames) {
-        mObjectTransforms[name] = UniformTransformData::create();
-        mObjectAnimShade[name] = UniformAnimShadeData::create();
+        //create new uniform data for each shape in each object
+        for (size_t i = 0; i < mObjects[name].shapeCount(); ++i) {
+            mObjectTransforms[name].emplace_back(UniformTransformData::create());
+            mObjectAnimShade[name].emplace_back(UniformAnimShadeData::create());
+        }
+        
     }
 
     //Make a color map. You can either improve on this, or throw it away and use something more sophisticated.
     auto BlPhColors = unordered_map<string, AnimShadeData>();
     initBlinnPhongColorMap(&BlPhColors);
 
+    //if you don't want to set individual AnimShadeData's for every shape in the object, use this.
+    auto setAllAnimShadeData = [this](string name, AnimShadeData animShadeData) {
+        for (size_t i = 0; i < mObjects[name].shapeCount(); ++i) {
+            mObjectAnimShade[name][i]->setStruct(animShadeData);
+        }
+    };
+
     //set uniform shading data to colors defined in color map, or to some texture. The key is the name of the file, without the extension.
-    mObjectAnimShade["bunny"]->setStruct(BlPhColors["cyan"]);
-    mObjectAnimShade["vulkan"]->setStruct(BlPhColors["red"]);
-    mObjectAnimShade["suzanne"]->setStruct(AnimShadeData(TEXTURED_SHADED, 1));
-    mObjectAnimShade["ballTex"]->setStruct(AnimShadeData(TEXTURED_SHADED, 0));
-    mObjectAnimShade["Cube"]->setStruct(AnimShadeData(TEXTURED_FLAT, 2));
-    
-    mObjectAnimShade["Lantern"]->setStruct(AnimShadeData(TEXTURED_FLAT, 4));
-    mObjectAnimShade["CesiumMilkTruck"]->setStruct(AnimShadeData(TEXTURED_SHADED, 5));
-    mObjectAnimShade["Buggy"]->setStruct(BlPhColors["white"]);
-    mObjectAnimShade["OrientationTest"]->setStruct(BlPhColors["purple"]);
-    mObjectAnimShade["dummy"]->setStruct(BlPhColors["purple"]);
+    setAllAnimShadeData("bunny", BlPhColors["cyan"]);
+    setAllAnimShadeData("vulkan", BlPhColors["red"]);
+    setAllAnimShadeData("suzanne", AnimShadeData(TEXTURED_SHADED, 1));
+    setAllAnimShadeData("ballTex", AnimShadeData(TEXTURED_SHADED, 0));
+    setAllAnimShadeData("Cube", AnimShadeData(TEXTURED_FLAT, 2));
+    setAllAnimShadeData("Lantern", AnimShadeData(TEXTURED_FLAT, 4));
+
+    //just to reference the "by-shape" way to do this. Set the lantern body's AnimShadeData to be the emissive texture.
+    mObjectAnimShade["Lantern"][2]->setStruct(AnimShadeData(TEXTURED_FLAT, 3));
+
+    setAllAnimShadeData("CesiumMilkTruck", AnimShadeData(TEXTURED_SHADED, 5));
+    setAllAnimShadeData("Buggy", BlPhColors["white"]);
+    setAllAnimShadeData("OrientationTest", BlPhColors["purple"]);
+    setAllAnimShadeData("dummy", BlPhColors["purple"]);
 
     //this is called after all mObjectAnimShades are initialized, which records their initial shading layer for reverting after pressing keybinds 1-5.
     //Can remove all of the shading layer code if you are not using the debug shader.
@@ -416,7 +450,7 @@ void Application::addMultiShapeObjects() {
         vector<UniformDataInterfaceSet> sets;
         //for each shape in that object. Change
         for (int i = 0; i < mObjects[name].shapeCount(); i++) {
-            sets.push_back({ {1, mObjectTransforms[name]}, {2, mObjectAnimShade[name]} });
+            sets.push_back({ {1, mObjectTransforms[name][i]}, {2, mObjectAnimShade[name][i]}});
             //this keeps track of where in the vector of descriptor sets the particular shape's descriptor set data was inserted into.
             mObjects[name].setDescriptorSetPosition(i + previousDescriptorSetPosition);
         }

@@ -112,9 +112,9 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     /// Collection of objects in our scene. Each is geometry loaded from an .obj file.
     std::unordered_map<std::string, ObjMultiShapeGeometry> mObjects;
     /// Collection of model transform data. Contains an entry for each object in mObjects.
-    std::unordered_map<std::string, UniformTransformDataPtr> mObjectTransforms;
+    std::unordered_map<std::string, std::vector<UniformTransformDataPtr>> mObjectTransforms;
     /// Collection of extra per-object data. Contains an entry for each object in mObjects.
-    std::unordered_map<std::string, UniformAnimShadeDataPtr> mObjectAnimShade;
+    std::unordered_map<std::string, std::vector<UniformAnimShadeDataPtr>> mObjectAnimShade;
 
 #ifdef CPE471_VULKAN_SAFETY_RAILS
  private:
