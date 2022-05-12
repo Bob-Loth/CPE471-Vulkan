@@ -30,12 +30,14 @@ ShadingLayer currentShadingLayer = NO_FORCED_LAYER; /*static initialization prob
 class MatrixNode
 {
 public:
-    MatrixNode(int index, glm::mat4 localModelMatrix) : index(index), localModelMatrix(localModelMatrix), parent(-1) {};
+    MatrixNode(int index, glm::mat4 localModelMatrix, glm::vec3 boundingBox) : index(index), localModelMatrix(localModelMatrix), boundingBox(boundingBox), parent(-1) {};
     
     //the local model matrix, without any applied matrices from the parent.
     glm::mat4 localModelMatrix;
+    glm::vec3 boundingBox;
     // the parent in the shape hierarchy. Null if this is the root node.
     int parent;
+    vector<int> children;
     // any children in the shape hierarchy. Empty if this is a leaf node.
     //std::vector<std::shared_ptr<MatrixNode>> children;
 private:
@@ -43,20 +45,24 @@ private:
     int index;
 };
 
-glm::mat4 computeCTM(const vector<MatrixNode>& tree, int indexToCompute) {
+/*glm::mat4 computeCTM(const vector<MatrixNode>& tree, int indexToCompute) {
     glm::mat4 CTM = tree[indexToCompute].localModelMatrix;
     int currentParent = tree[indexToCompute].parent;
     while (currentParent != -1) {
+        glm::mat4 t = glm::translate(computeCTM(tree, currentParent),tree[currentParent].boundingBox);
+        glm::mat4 negT = glm::translate(computeCTM(tree, currentParent), -tree[currentParent].boundingBox);
+        CTM *= t;
         CTM = tree[currentParent].localModelMatrix * CTM;
+        CTM *= negT;
         currentParent = tree[currentParent].parent;
     }
     return CTM;
-}
+}*/
 
-vector<MatrixNode> createVectorOfMatrixNodes(int size) {
+vector<MatrixNode> createVectorOfMatrixNodes(int size, vector<glm::vec3> boxes) {
     auto ret = vector<MatrixNode>();
     for (int i = 0; i < size; ++i) {
-        ret.emplace_back(MatrixNode(i, glm::mat4(1.0f)));
+        ret.emplace_back(MatrixNode(i, glm::mat4(1.0f), boxes[i]));
     }
     return ret;
 }
@@ -87,6 +93,11 @@ class Application : public VulkanGraphicsApp
     void initShaders();
     void initUniforms();
     void initHierarchies();
+    void shooterRender();
+    void shooterRightArmRender(std::shared_ptr<MatrixStack> Model);
+    void shooterLeftArmRender(std::shared_ptr<MatrixStack> Model);
+    void shooterLegRender(shared_ptr<MatrixStack> Model, bool isRight);
+    shared_ptr<MatrixStack> rHandAnchor = make_shared<MatrixStack>();
     void render(double dt);
 
     //names of the loaded shapefiles.
@@ -222,37 +233,48 @@ int main(){
 }
 
 void Application::initHierarchies() {
-    vector<MatrixNode> dummyTfs = createVectorOfMatrixNodes(mObjects["dummy"].shapeCount());
+    
     vector<glm::vec3> boxes = mObjects["dummy"].BBoxCenters();
+    vector<MatrixNode> dummyTfs = createVectorOfMatrixNodes(mObjects["dummy"].shapeCount(), boxes);
     //give hips a base transform.
     glm::mat4 baseMatrix = glm::translate(glm::vec3(0.0, 0.0, 2.0)) * glm::rotate(glm::pi<float>() / 2, glm::vec3(-1.0, 0.0, 0.0)) * glm::scale(glm::vec3(1.0 / 25.0));
     dummyTfs[12].localModelMatrix = baseMatrix; //this is the root node, so it has no parent. Additional nodes should set a parent node that they will inherit transforms from.
     //set belly, L+R pelvis to be children of hips.
     dummyTfs[13].parent = dummyTfs[11].parent = dummyTfs[5].parent = 12;
+    dummyTfs[12].children = { 13, 11, 5 };
+
     //set each of the legs.
     //right leg.
     for (int i = 4; i >= 0; --i) {
         dummyTfs[i].parent = i + 1;
+        dummyTfs[i + 1].children = { i };
     }
     //left leg.
     for (int i = 10; i >= 6; --i) {
         dummyTfs[i].parent = i + 1;
+        dummyTfs[i + 1].children = { i };
     }
     //start setting up things in the upper body.
     // belly -> torso--> neck -> head
     dummyTfs[14].parent = 13;
+    dummyTfs[13].children = { 14 };
     dummyTfs[27].parent = 14;
+    dummyTfs[14].children = { 27 };
     dummyTfs[28].parent = 27;
+    dummyTfs[27].children = { 28 };
 
     //attach the shoulders to the torso.
     dummyTfs[21].parent = dummyTfs[15].parent = 14;
+    dummyTfs[14].children = { 15, 21 };
     //               |-> rshoulder -> bicep -> elbow -> forearm -> wrist -> hand
     for (int i = 20; i >= 16; --i) {
         dummyTfs[i].parent = i - 1;
+        dummyTfs[i - 1].children = { i };
     }
     //               |-> lshoulder -> bicep -> elbow -> forearm -> wrist -> hand
     for (int i = 26; i >= 22; --i) {
         dummyTfs[i].parent = i - 1;
+        dummyTfs[i - 1].children = { i };
     }
     //now that we've defined the relationship between each of the multishape objects, send it to the rest of the application.
     mObjectHierarchies["dummy"] = dummyTfs;
@@ -354,7 +376,179 @@ void Application::cleanup(){
     VulkanGraphicsApp::cleanup();
 }
 
+void Application::shooterLegRender(shared_ptr<MatrixStack> Model, bool isRight) {
+    int offset = 0;
+    int flip = 1;
+    if (!isRight) {
+        offset = 6;
+        flip = -flip;
+    }
 
+    Model->pushMatrix();
+    glm::vec3 pivotRPelvis = mObjects["dummy"].BBoxCenters()[5 + offset];//getCenterOfBBox(dummy->at(5 + offset));
+    Model->translate(pivotRPelvis);
+    Model->rotate(flip * 0.5 * cos(2 * glm::pi<double>() * glfwGetTime()), glm::vec3(0, 1, 0));
+    Model->translate(-pivotRPelvis);
+    
+    mObjectTransforms["dummy"][4 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(4 + offset).draw(prog);
+    mObjectTransforms["dummy"][5 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(5 + offset).draw(prog);
+    Model->pushMatrix();
+    glm::vec3 pivotRKnee = mObjects["dummy"].BBoxCenters()[3 + offset];//getCenterOfBBox(dummy->at(3 + offset));
+    Model->translate(pivotRKnee);
+    Model->rotate(flip * 0.25 * cos(2 * glm::pi<double>() * glfwGetTime()) + glm::pi<float>() / 8, glm::vec3(0, 1, 0));
+    Model->translate(-pivotRKnee);
+    
+    mObjectTransforms["dummy"][2 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(2 + offset).draw(prog);
+    mObjectTransforms["dummy"][3 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(3 + offset).draw(prog);
+    Model->pushMatrix();
+    glm::vec3 pivotRAnkle = mObjects["dummy"].BBoxCenters()[1 + offset];//getCenterOfBBox(dummy->at(1 + offset));
+    Model->translate(pivotRAnkle);
+    Model->rotate(glm::pi<float>() / 3, glm::vec3(0, 1, 0));
+    Model->translate(-pivotRAnkle);
+    
+    mObjectTransforms["dummy"][0 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(0 + offset).draw(prog);
+    mObjectTransforms["dummy"][1 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(1 + offset).draw(prog);
+    Model->popMatrix();
+    Model->popMatrix();
+    Model->popMatrix();
+}
+
+void Application::shooterRightArmRender(std::shared_ptr<MatrixStack> Model) {
+    using namespace glm;
+    int mirror = 1;
+    int armIndex = 15;
+    float shoulderRot = cos(pi<double>() * glfwGetTime());
+    float elbowRot = cos(2 * pi<double>());
+    Model->pushMatrix();
+    vec3 pivotTorso = mObjects["dummy"].BBoxCenters()[14];
+    Model->translate(vec3(0, mirror * (1 * -0.5 + 5), 3 * -0.5));
+    
+    mObjectTransforms["dummy"][armIndex]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex).draw(prog);
+    Model->pushMatrix();
+    vec3 rShoulder = mObjects["dummy"].BBoxCenters()[armIndex];
+    Model->translate(rShoulder); //center of shoulder
+    ////rotate upper arm towards goal just a small amount at the end of the throw. Hips, chest, and elbow does most of the work.
+    Model->rotate((pi<float>() / 8) * shoulderRot + (pi<float>() / 8), vec3(mirror * 0, 0, 1));
+    Model->translate(-rShoulder);
+    
+    mObjectTransforms["dummy"][armIndex + 1]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 1).draw(prog);
+    mObjectTransforms["dummy"][armIndex + 2]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 2).draw(prog);
+    
+    Model->pushMatrix();
+    vec3 rElbow = mObjects["dummy"].BBoxCenters()[armIndex + 2]; //getCenterOfBBox(dummy->at(armIndex + 2));
+    Model->translate(rElbow); //center of elbow
+    Model->rotate((pi<float>() / 4), vec3(mirror * -1, 0, 0));
+    Model->rotate((pi<float>() / 4) * elbowRot - (pi<float>() / 4), vec3(mirror * 0, 1, 0));
+    Model->translate(-rElbow);
+    
+    mObjectTransforms["dummy"][armIndex + 3]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 3).draw(prog);
+    mObjectTransforms["dummy"][armIndex + 4]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 4).draw(prog);
+    Model->pushMatrix();
+    vec3 rWrist = mObjects["dummy"].BBoxCenters()[armIndex + 4]; //getCenterOfBBox(dummy->at(armIndex + 4));
+    Model->translate(rWrist); //center of wrist
+    Model->rotate(-0.5 * pi<float>() / 2 * cos(pi<double>() * glfwGetTime()) + pi<float>() / 2, vec3(0, -1, 0));
+    
+    Model->translate(-rWrist);
+    Model->translate(mObjects["dummy"].BBoxCenters()[armIndex + 5]); //move the ctm to the hand
+    rHandAnchor = make_shared<MatrixStack>(*Model); //snapshot the ctm at this point
+    Model->translate(-mObjects["dummy"].BBoxCenters()[armIndex + 5]);
+    
+    mObjectTransforms["dummy"][armIndex + 5]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 5).draw(prog);
+    Model->popMatrix();
+    Model->popMatrix();
+    Model->popMatrix();
+    Model->popMatrix();
+}
+
+void Application::shooterLeftArmRender(std::shared_ptr<MatrixStack> Model) {
+    using namespace glm;
+    int mirror = -1;
+    int armIndex = 21;
+    auto bbox = [this](int index) {return mObjects["dummy"].BBoxCenters()[index]; };
+    auto setModel = [this](int index, shared_ptr<MatrixStack> Model) {mObjectTransforms["dummy"][index]->getStruct().Model = Model->topMatrix(); };
+
+    Model->pushMatrix();
+    vec3 pivotTorso = bbox(14);
+    Model->translate(vec3(0, mirror * (1 * -0.5 + 5), 3 * -0.5));
+    setModel(armIndex, Model);
+    Model->pushMatrix();
+    vec3 rShoulder = bbox(armIndex);
+    Model->translate(rShoulder); //center of shoulder
+    Model->rotate((pi<float>() / 4) * -0.5 - (pi<float>() / 8), vec3(mirror * -1, 0, 0));
+    Model->translate(-rShoulder);
+    setModel(armIndex + 1, Model);
+    setModel(armIndex + 2, Model);
+    
+    Model->pushMatrix();
+    vec3 rElbow = bbox(armIndex + 2);
+    Model->translate(rElbow); //center of shoulder
+    Model->rotate((pi<float>() / 6) * -0.5 - (pi<float>() / 16), vec3(mirror * -1, 0, 0));
+    Model->translate(-rElbow);
+    setModel(armIndex + 3, Model);
+    setModel(armIndex + 4, Model);
+    
+    Model->pushMatrix();
+    vec3 rWrist = bbox(armIndex + 4);
+    Model->translate(rWrist); //center of shoulder
+    Model->rotate(pi<float>() / 2, vec3(0, -1, 0));
+    Model->translate(-rWrist);
+
+    setModel(armIndex + 5, Model);
+
+    Model->popMatrix();
+    Model->popMatrix();
+    Model->popMatrix();
+    Model->popMatrix();
+}
+
+void Application::shooterRender() {
+    vector<MatrixNode> tree = mObjectHierarchies["dummy"];
+    MatrixNode root = tree[12];
+    
+    std::shared_ptr<MatrixStack> Model = make_shared<MatrixStack>();
+    Model->pushMatrix();
+    Model->loadIdentity();
+    glm::translate(glm::vec3(0.0, 0.0, 2.0))* glm::rotate(glm::pi<float>() / 2, glm::vec3(-1.0, 0.0, 0.0))* glm::scale(glm::vec3(1.0 / 25.0));
+    Model->translate(glm::vec3(0.0, 0.0, 2.0));
+    Model->rotate(glm::pi<float>() / 2, glm::vec3(-1.0, 0.0, 0.0));
+    Model->scale(glm::vec3(1.0 / 25.0));
+    //draw hips and belly
+    for (size_t i = 12; i < 14; i++) {
+        mObjectTransforms["dummy"][i]->getStruct().Model = Model->topMatrix();
+    }
+    //draw right leg
+    shooterLegRender(Model, true);
+
+    //draw left leg
+    shooterLegRender(Model, false);
+    //draw the upper body
+    Model->pushMatrix();
+    glm::vec3 pivotBelly = mObjects["dummy"].BBoxCenters()[13];//getCenterOfBBox(dummy->at(13));
+    Model->translate(pivotBelly);
+    Model->rotate(0.5 * cos(glm::pi<double>() * glfwGetTime()), glm::vec3(0, 0, 1));
+    Model->rotate(0.2 * cos(glm::pi<double>() * glfwGetTime()), glm::vec3(0, 1, 0));
+    Model->translate(-pivotBelly);
+    
+    mObjectTransforms["dummy"][14]->getStruct().Model = Model->topMatrix();//dummy->at(14).draw(prog);
+    ////draw the right arm
+    shooterRightArmRender(Model);
+    //// draw the left arm
+    shooterLeftArmRender(Model);
+    ////reverse-rotate the head and neck so that they stay aligned with hips
+    Model->pushMatrix();
+    glm::vec3 pivotNeck = mObjects["dummy"].BBoxCenters()[27];
+    Model->translate(pivotNeck);
+    Model->rotate(0.5 * cos(glm::pi<double>() * glfwGetTime()), glm::vec3(0, 0, -1));
+    Model->rotate(0.2 * cos(glm::pi<double>() * glfwGetTime()), glm::vec3(0, -1, 0));
+    Model->translate(-pivotNeck);
+    
+    for (size_t i = 27; i < mObjectTransforms["dummy"].size(); i++) {
+        mObjectTransforms["dummy"][i]->getStruct().Model = Model->topMatrix();//dummy->at(i).draw(prog);
+    }
+    Model->popMatrix();
+    Model->popMatrix();
+    Model->popMatrix();
+}
 
 /// Animate the objects within our scene and then render it. 
 void Application::render(double dt){
@@ -371,17 +565,13 @@ void Application::render(double dt){
         }
     };
 
-    auto setHierarchicalTransformData = [this](string name) {
-        for (size_t i = 0; i < mObjects[name].shapeCount(); ++i) {
-            mObjectTransforms[name][i]->getStruct().Model = computeCTM(mObjectHierarchies[name], i);
-        }
-    };
+    
 
     // Spin the logo in place. 
     setAllObjectTransformData("vulkan", glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0)));
     
     // Spin the ball opposite direction of logo, above it.
-    setAllObjectTransformData("ballTex", glm::translate(vec3(0.0, 3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)));
+    setAllObjectTransformData("ballTex", rHandAnchor->topMatrix() * glm::scale(glm::vec3(15.0f)) * glm::translate(vec3(0,0,-1)));
 
     // Spin the cube around above both the logo and the ball.
     setAllObjectTransformData("Cube", glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1)));
@@ -396,9 +586,7 @@ void Application::render(double dt){
     setAllObjectTransformData("Buggy", glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05)));
 
     //position dummy. Refer to Dummy Labels.png in the asset directory for correct indices.
-    
-    setHierarchicalTransformData("dummy");
-    
+    shooterRender();
 
     // Rotate all other objects around the Vulkan logo in the center
     constexpr float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
