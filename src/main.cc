@@ -45,20 +45,6 @@ private:
     int index;
 };
 
-/*glm::mat4 computeCTM(const vector<MatrixNode>& tree, int indexToCompute) {
-    glm::mat4 CTM = tree[indexToCompute].localModelMatrix;
-    int currentParent = tree[indexToCompute].parent;
-    while (currentParent != -1) {
-        glm::mat4 t = glm::translate(computeCTM(tree, currentParent),tree[currentParent].boundingBox);
-        glm::mat4 negT = glm::translate(computeCTM(tree, currentParent), -tree[currentParent].boundingBox);
-        CTM *= t;
-        CTM = tree[currentParent].localModelMatrix * CTM;
-        CTM *= negT;
-        currentParent = tree[currentParent].parent;
-    }
-    return CTM;
-}*/
-
 vector<MatrixNode> createVectorOfMatrixNodes(int size, vector<glm::vec3> boxes) {
     auto ret = vector<MatrixNode>();
     for (int i = 0; i < size; ++i) {
@@ -634,6 +620,7 @@ void Application::loadShapeFilesFromPath(string dir) {
     auto isGLTF = [](fs::path de) {return de.extension() == ".gltf"; };
     auto isGLB = [](fs::path de) {return de.extension() == ".glb"; };
     auto isOBJ = [](fs::path de) {return de.extension() == ".obj"; };
+    Timer timer;
     for (const auto& entry : fs::directory_iterator(dir)) {
 
         if (entry.is_regular_file()) {
@@ -641,17 +628,26 @@ void Application::loadShapeFilesFromPath(string dir) {
            
             if (isGLTF(entry.path())) {
                 cout << "loading .gltf file: " << entry.path() << endl;
+                timer.start();
                 mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), false);
+                int ms = timer.stop();
+                cout << "loading .gltf file took " << ms << " milliseconds." << endl;
                 mObjectNames.push_back(filenameNoExt);
             }
             else if (isGLB(entry.path())) {
                 cout << "loading .glb file: " << entry.path() << endl;
+                timer.start();
                 mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), true);
+                int ms = timer.stop();
+                cout << "loading .glb file took " << ms << " milliseconds." << endl;
                 mObjectNames.push_back(filenameNoExt);
             }
             else if (isOBJ(entry.path())) {
                 cout << "loading .obj file: " << entry.path() << endl;
+                timer.start();
                 mObjects[filenameNoExt] = load_obj_to_vulkan(getPrimaryDeviceBundle(), entry.path().string());
+                int ms = timer.stop();
+                cout << "loading .obj file took " << ms << " milliseconds." << endl;
                 mObjectNames.push_back(filenameNoExt);
             }
                 
@@ -671,6 +667,8 @@ void Application::initGeometry(){
         //create new uniform data for each shape in each object
         for (size_t i = 0; i < mObjects[name].shapeCount(); ++i) {
             mObjectTransforms[name].emplace_back(UniformTransformData::create());
+            mObjectTransforms[name][i]->getStruct().gltfModel = mObjects[name].mGLTFModelMatrices[i];
+            cout << glm::to_string(mObjects[name].mGLTFModelMatrices[i]) << endl;
             mObjectAnimShade[name].emplace_back(UniformAnimShadeData::create());
         }
         
