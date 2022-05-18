@@ -9,6 +9,7 @@
 #include "load_gltf.h"
 #include "load_texture.h"
 #include "MatrixStack.h"
+#include "Timer.h"
 
 #include <filesystem>
 #include <iostream>
@@ -667,8 +668,6 @@ void Application::initGeometry(){
         //create new uniform data for each shape in each object
         for (size_t i = 0; i < mObjects[name].shapeCount(); ++i) {
             mObjectTransforms[name].emplace_back(UniformTransformData::create());
-            mObjectTransforms[name][i]->getStruct().gltfModel = mObjects[name].mGLTFModelMatrices[i];
-            cout << glm::to_string(mObjects[name].mGLTFModelMatrices[i]) << endl;
             mObjectAnimShade[name].emplace_back(UniformAnimShadeData::create());
         }
         

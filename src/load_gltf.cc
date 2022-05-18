@@ -2,10 +2,11 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "load_gltf.h"
-
+#include <future>
 using namespace tinygltf;
 using namespace glm;
 using namespace std;
+
 
 ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundle, std::string filename, bool isBinary) {
     Model model;
@@ -46,11 +47,13 @@ void process_vertices(const Model& model, const Accessor& accessor, std::vector<
 
     //the buffer itself.
     Buffer buffer = model.buffers[bufferView.buffer];
+    
     auto data = buffer.data; //the vector of bytes. bufferView and accessor will be used to read it.
-
+    uint8_t* memoryStart = data.data() + offset;
+    
     for (int i = 0; i < accessor.count; i++) {
         //convince the compiler that data points to floating point data.
-        float* memoryLocation = reinterpret_cast<float*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+        float* memoryLocation = reinterpret_cast<float*>(memoryStart + (i * static_cast<size_t>(stride)));
         //read in the vec3.
         objVertices.emplace_back(ObjVertex{CTM * glm::vec4(ptr_to_vec3(memoryLocation), 1.0f) });
     }
@@ -67,10 +70,10 @@ void process_normals(const Model& model, const Accessor& accessor, std::vector<O
     //the buffer itself.
     Buffer buffer = model.buffers[bufferView.buffer];
     auto data = buffer.data; //the vector of bytes. bufferView and accessor will be used to read it.
-
+    uint8_t* memoryStart = data.data() + offset;
     for (int i = 0; i < accessor.count; i++) {
         //convince the compiler that data points to floating point data.
-        float* memoryLocation = reinterpret_cast<float*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+        float* memoryLocation = reinterpret_cast<float*>(memoryStart + (i * static_cast<size_t>(stride)));
         //read in the vec3.
         //objVertices.emplace_back(ObjVertex{ glm::vec3(ptr_to_vec3(memoryLocation)) });
         objVertices.at(i + cumulativeIndexCount).normal = glm::normalize(CTM * glm::vec4(ptr_to_vec3(memoryLocation), 0.0f));
@@ -88,9 +91,10 @@ void process_texcoords(const Model& model, const Accessor& accessor, std::vector
     //the buffer itself.
     Buffer buffer = model.buffers[bufferView.buffer];
     auto data = buffer.data; //the vector of bytes. bufferView and accessor will be used to read it.
+    uint8_t* memoryStart = data.data() + offset;
     for (int i = 0; i < accessor.count; i++) {
         //convince the compiler that data points to floating point data. Move data ptr forward by stride bytes.
-        float* memoryLocation = reinterpret_cast<float*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+        float* memoryLocation = reinterpret_cast<float*>(memoryStart + (i * static_cast<size_t>(stride)));
         //read in the vec2.
         vec2 v = ptr_to_vec2(memoryLocation);
         v = vec2(v.s, -v.t); //deal with the fact that the obj format's texcoord.t is inverted, and the base code assumes the obj format.
@@ -113,20 +117,20 @@ void process_indices(const Model& model, const Accessor& accessor, std::vector<O
     //the buffer itself.
     Buffer buffer = model.buffers[bufferView.buffer];
     auto data = buffer.data; //the vector of bytes. bufferView and accessor will be used to read it.
-
+    uint8_t* memoryStart = data.data() + offset;
     for (int i = 0; i < accessor.count; i++) {
         //convince the compiler that data points to a particular size of data. Move data ptr forward by stride bytes.
         unsigned int val;
         if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-            unsigned short* memoryLocation = reinterpret_cast<unsigned short*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+            unsigned short* memoryLocation = reinterpret_cast<unsigned short*>(memoryStart + (i * static_cast<size_t>(stride)));
             val = *memoryLocation;
         }
         else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
-            unsigned char* memoryLocation = reinterpret_cast<unsigned char*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+            unsigned char* memoryLocation = reinterpret_cast<unsigned char*>(memoryStart + (i * static_cast<size_t>(stride)));
             val = *memoryLocation;
         }
         else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
-            unsigned int* memoryLocation = reinterpret_cast<unsigned int*>(data.data() + offset + (i * static_cast<size_t>(stride)));
+            unsigned int* memoryLocation = reinterpret_cast<unsigned int*>(memoryStart + (i * static_cast<size_t>(stride)));
             val = *memoryLocation;
         }
         outputIndices.push_back(val + cumulativeIndexCount);
@@ -211,6 +215,7 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
     }
     
     SceneGraph graph;
+    
     //for (const auto& node : model.nodes) {
     //    graph.constructCTMTree(model, node, nullptr);
     //}
@@ -235,35 +240,36 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
         for (const auto& primitive : model.meshes[treeNode->getNode().mesh].primitives) {//shapes in mesh
             assert(primitive.mode == TINYGLTF_MODE_TRIANGLES); //only work with triangle data for now.
             std::vector<ObjMultiShapeGeometry::index_t> outputIndices;
-
+            std::vector<std::future<void>> futures; //vertices, indices, normals if they exist, texcoords if they exist
             //determine where our data is
             auto attrMap = primitive.attributes;
             //assume the gltf files have vertex positions and indices.
             vertexIndex = attrMap["POSITION"];
             Accessor vertAcc = model.accessors[vertexIndex];
             cumulativeIndexCount = objVertices.size(); //add in the amount of vertices we added, so the next shape's index starts where we left off.
-            process_vertices(model, vertAcc, objVertices, currentTransformMatrix);
+            futures.emplace_back(std::async(launch::async, [&]{process_vertices(model, vertAcc, objVertices, currentTransformMatrix);}));
+            //process_vertices(model, vertAcc, objVertices, currentTransformMatrix);
 
             Accessor indexAcc = model.accessors[primitive.indices];
-
-
-            process_indices(model, indexAcc, outputIndices, cumulativeIndexCount);
+            futures.emplace_back(std::async(launch::async, [&]{process_indices(model, indexAcc, outputIndices, cumulativeIndexCount);}));
             
 
             //optionally find normal data and include it
             if (attrMap.find("NORMAL") != attrMap.end()) {
                 normalIndex = attrMap["NORMAL"];
                 Accessor normAcc = model.accessors[normalIndex];
-                process_normals(model, normAcc, objVertices, cumulativeIndexCount, currentTransformMatrix);
+                futures.emplace_back(async(launch::async, [&]{process_normals(model, normAcc, objVertices, cumulativeIndexCount, currentTransformMatrix);}));
             }
 
             //optionally find texture data and include it
             if (attrMap.find("TEXCOORD_0") != attrMap.end()) {
                 textureIndex = attrMap["TEXCOORD_0"];
                 Accessor texAcc = model.accessors[textureIndex];
-                process_texcoords(model, texAcc, objVertices, cumulativeIndexCount);
+                futures.emplace_back(async(launch::async, [&]{process_texcoords(model, texAcc, objVertices, cumulativeIndexCount);}));
             }
-
+            for(auto& fut : futures){
+                fut.wait();
+            }
             ivGeoOut.addShape(outputIndices);
         }
     }
