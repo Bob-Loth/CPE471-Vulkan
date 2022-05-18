@@ -37,7 +37,7 @@ ObjMultiShapeGeometry load_gltf_to_vulkan(const VulkanDeviceBundle& aDeviceBundl
     return ivGeo;
 }
 
-void process_vertices(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices, glm::mat4 CTM) {
+void process_vertices(const Model& model, const Accessor& accessor, std::vector<ObjVertex>& objVertices, int cumulativeIndexCount, glm::mat4 CTM) {
     assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     assert(accessor.type == TINYGLTF_TYPE_VEC3);
     
@@ -55,7 +55,7 @@ void process_vertices(const Model& model, const Accessor& accessor, std::vector<
         //convince the compiler that data points to floating point data.
         float* memoryLocation = reinterpret_cast<float*>(memoryStart + (i * static_cast<size_t>(stride)));
         //read in the vec3.
-        objVertices.emplace_back(ObjVertex{CTM * glm::vec4(ptr_to_vec3(memoryLocation), 1.0f) });
+        objVertices.at(i + cumulativeIndexCount).position = CTM * glm::vec4(ptr_to_vec3(memoryLocation), 1.0f);
     }
 }
 
@@ -247,7 +247,8 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
             vertexIndex = attrMap["POSITION"];
             Accessor vertAcc = model.accessors[vertexIndex];
             cumulativeIndexCount = objVertices.size(); //add in the amount of vertices we added, so the next shape's index starts where we left off.
-            futures.emplace_back(std::async(launch::async, [&]{process_vertices(model, vertAcc, objVertices, currentTransformMatrix);}));
+            objVertices.resize(cumulativeIndexCount + vertAcc.count);
+            futures.emplace_back(std::async(launch::async, [&]{process_vertices(model, vertAcc, objVertices, cumulativeIndexCount, currentTransformMatrix);}));
             //process_vertices(model, vertAcc, objVertices, currentTransformMatrix);
 
             Accessor indexAcc = model.accessors[primitive.indices];
