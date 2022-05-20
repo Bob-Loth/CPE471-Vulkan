@@ -552,8 +552,6 @@ void Application::render(double dt){
         }
     };
 
-    
-
     // Spin the logo in place. 
     setAllObjectTransformData("vulkan", glm::scale(vec3(2.5f)) * glm::rotate(float(gt), vec3(0.0, 1.0, 0.0)));
     
@@ -563,11 +561,9 @@ void Application::render(double dt){
     // Spin the cube around above both the logo and the ball.
     setAllObjectTransformData("Cube", glm::translate(vec3(0.0, -3.0, 0.0)) * glm::rotate(float(gt), vec3(0.0, -1.0, 0.0)) * glm::scale(vec3(sin(gt), cos(gt), 1)));
     
-    
     // move the lantern into the background
     setAllObjectTransformData("Lantern", glm::translate(vec3(0.0, 0.0, -2.0)) * glm::scale(vec3(0.2)));
     
-
     setAllObjectTransformData("OrientationTest", glm::translate(vec3(0.0, 4.0, -4.0)) * glm::rotate(glm::radians(45.0f), vec3(0, 1, 1)) * glm::scale(vec3(0.1)));
     setAllObjectTransformData("CesiumMilkTruck", glm::translate(vec3(0.0, -4.0, -4.0)) * glm::scale(vec3(0.5)));
     setAllObjectTransformData("Buggy", glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05)));
