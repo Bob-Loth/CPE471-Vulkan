@@ -182,7 +182,7 @@ void SceneGraph::constructCTMTree(const tinygltf::Model& model, std::shared_ptr<
             //            of each of the objects referred to by the accessor-bufferview combo.
 void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
     //verify assumption about gltf data
-    
+
 
     int vertexIndex = -1;
     int normalIndex = -1;
@@ -193,12 +193,12 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
     for (const auto& mesh : model.meshes) {//meshes in scene
         for (const auto& primitive : mesh.primitives) {//shapes in mesh
             size_t numIndices = model.accessors[primitive.indices].count; //indices in shape
-            totalIndices += numIndices;      
+            totalIndices += numIndices;
         }
     }
-    
+
     SceneGraph graph;
-    
+
     //for (const auto& node : model.nodes) {
     //    graph.constructCTMTree(model, node, nullptr);
     //}
@@ -223,6 +223,7 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
         for (const auto& primitive : model.meshes[treeNode->getNode().mesh].primitives) {//shapes in mesh
             assert(primitive.mode == TINYGLTF_MODE_TRIANGLES); //only work with triangle data for now.
             std::vector<ObjMultiShapeGeometry::index_t> outputIndices;
+            std::vector<std::future<void>> futures; //vertices, indices, normals if they exist, texcoords if they exist
             //determine where our data is
             auto attrMap = primitive.attributes;
             //assume the gltf files have vertex positions and indices.
@@ -230,41 +231,43 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
             Accessor vertAcc = model.accessors[vertexIndex];
             cumulativeIndexCount = objVertices.size(); //add in the amount of vertices we added, so the next shape's index starts where we left off.
             objVertices.resize(cumulativeIndexCount + vertAcc.count);
-            process_vertices(model, vertAcc, objVertices, cumulativeIndexCount, currentTransformMatrix);
+            futures.emplace_back(std::async(launch::async, [&] {process_vertices(model, vertAcc, objVertices, cumulativeIndexCount, currentTransformMatrix); }));
             //process_vertices(model, vertAcc, objVertices, currentTransformMatrix);
 
             Accessor indexAcc = model.accessors[primitive.indices];
-            process_indices(model, indexAcc, outputIndices, cumulativeIndexCount);
-            
+            futures.emplace_back(std::async(launch::async, [&] {process_indices(model, indexAcc, outputIndices, cumulativeIndexCount); }));
+
 
             //optionally find normal data and include it
             if (attrMap.find("NORMAL") != attrMap.end()) {
                 normalIndex = attrMap["NORMAL"];
                 Accessor normAcc = model.accessors[normalIndex];
-                process_normals(model, normAcc, objVertices, cumulativeIndexCount, currentTransformMatrix);
+                futures.emplace_back(async(launch::async, [&] {process_normals(model, normAcc, objVertices, cumulativeIndexCount, currentTransformMatrix); }));
             }
 
             //optionally find texture data and include it
             if (attrMap.find("TEXCOORD_0") != attrMap.end()) {
                 textureIndex = attrMap["TEXCOORD_0"];
                 Accessor texAcc = model.accessors[textureIndex];
-                process_texcoords(model, texAcc, objVertices, cumulativeIndexCount);
+                futures.emplace_back(async(launch::async, [&] {process_texcoords(model, texAcc, objVertices, cumulativeIndexCount); }));
             }
-            
+            for (auto& fut : futures) {
+                fut.wait();
+            }
             ivGeoOut.addShape(outputIndices);
         }
     }
     ivGeoOut.setVertices(objVertices);
     // return a vector containing a vec3 describing the center of each shape's bounding box, for every shape in a multishape object.
-    
+
     std::vector<glm::vec3> centers;
     auto offsets = ivGeoOut.mShapeIndexBufferOffsets;
     auto indices = ivGeoOut.mIndicesConcat;
     for (int i = 0; i < ivGeoOut.shapeCount(); ++i) {
         size_t offset = ivGeoOut.getShapeOffset(i);
         size_t range = ivGeoOut.getShapeRange(i);
-        
-        
+
+
         float minX, minY, minZ;
         float maxX, maxY, maxZ;
         minX = minY = minZ = FLT_MAX;
@@ -275,7 +278,7 @@ void process_gltf_contents(Model& model, ObjMultiShapeGeometry& ivGeoOut) {
 
             if (objVertices[indices[j]].position.y < minY) minY = objVertices[indices[j]].position.y;
             if (objVertices[indices[j]].position.y > maxY) maxY = objVertices[indices[j]].position.y;
-            
+
             if (objVertices[indices[j]].position.z < minZ) minZ = objVertices[indices[j]].position.z;
             if (objVertices[indices[j]].position.z > maxZ) maxZ = objVertices[indices[j]].position.z;
         }
