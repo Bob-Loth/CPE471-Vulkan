@@ -27,6 +27,7 @@ using namespace std;
 namespace fs = std::filesystem; //fs is now an alias for the very long "std::filesystem" namespace.
 enum ShadingLayer { BLINN_PHONG, NORMAL_MAP, TEXTURE_MAP, TEXTURED_FLAT, TEXTURED_SHADED, NO_FORCED_LAYER };
 ShadingLayer currentShadingLayer = NO_FORCED_LAYER; /*static initialization problem generates linker error, using global for now*/
+int currentRenderPipeline = 0;
 
 class MatrixNode
 {
@@ -72,7 +73,6 @@ class Application : public VulkanGraphicsApp
     static void resizeCallback(GLFWwindow* aWindow, int aWidth, int aHeight);
     static void scrollCallback(GLFWwindow* aWindow, double aXOffset, double aYOffset);
     static void keyCallback(GLFWwindow* aWindow, int key, int scancode, int action, int mods);
-
  protected:
      void loadShapeFilesFromPath(string path);
      void initGeometry();
@@ -101,6 +101,7 @@ class Application : public VulkanGraphicsApp
     /// Static variables to be updated by glfw callbacks. 
     static float smViewZoom;
     static bool smResizeFlag;
+    
 };
 
 float Application::smViewZoom = 7.0f;
@@ -182,6 +183,11 @@ void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int ac
     }
     else if (key == GLFW_KEY_5 && action == GLFW_RELEASE){
         currentShadingLayer = NO_FORCED_LAYER;
+    }
+    else if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
+        //toggle fill mode.
+        currentRenderPipeline = (currentRenderPipeline == 0) ? 1 : 0;
+        cout << currentRenderPipeline << endl;
     }
     //modes end
     else if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
@@ -320,9 +326,9 @@ void Application::run(){
 
 /// Update view matrix from orbit camera controls 
 void Application::updateView(){
-    const float xSensitivity = 1.0f/glm::pi<float>();
+    constexpr float xSensitivity = 1.0f/glm::pi<float>();
     const float ySensitivity = xSensitivity;
-    const float thetaLimit = glm::radians(89.99f);
+    constexpr float thetaLimit = glm::radians(89.99f);
     static glm::dvec2 lastPos = glm::dvec2(std::numeric_limits<double>::quiet_NaN());
 
     glm::dvec2 pos;
@@ -579,7 +585,7 @@ void Application::render(double dt){
     setAllObjectTransformData("teapot", glm::rotate(-float(gt), vec3(0.0, 1.0, 0.0)) * glm::translate(radius * vec3(cos(angle * 2), .2f * sin(gt * 4.0f + angle * 2), sin(angle * 2))) * glm::rotate(2.0f * float(gt), vec3(0.0, 1.0, 0.0)));
     
     // Tell the GPU to render a frame. 
-    VulkanGraphicsApp::render();
+    VulkanGraphicsApp::render(currentRenderPipeline);
 } 
 
 

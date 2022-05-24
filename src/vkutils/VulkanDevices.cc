@@ -18,6 +18,7 @@ QueueFamily::QueueFamily(const VkQueueFamilyProperties& aFamily, uint32_t aIndex
 VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice aDevice) : mHandle(aDevice) {
     vkGetPhysicalDeviceProperties(aDevice, &mProperties);
     vkGetPhysicalDeviceFeatures(aDevice, &mFeatures);
+    mFeatures.fillModeNonSolid;
     _initExtensionProps();
     _initQueueFamilies();
 }
@@ -109,12 +110,13 @@ VulkanLogicalDevice VulkanPhysicalDevice::createLogicalDevice(VkQueueFlags aQueu
         queueCreateInfos[i].pQueuePriorities = &priorities;
         ++famIter; ++i;
     }
-
+    struct VkPhysicalDeviceFeatures features = {};
+    features.fillModeNonSolid = 1;
     VkDeviceCreateInfo createInfo;
     {
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         createInfo.pNext = nullptr;
-        createInfo.pEnabledFeatures = {};
+        createInfo.pEnabledFeatures = &features;
         createInfo.flags = 0;
         createInfo.ppEnabledLayerNames = nullptr;
         createInfo.enabledLayerCount = 0;

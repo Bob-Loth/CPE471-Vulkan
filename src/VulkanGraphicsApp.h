@@ -78,7 +78,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     VulkanGraphicsApp() {initCore();}
 
     void init();
-    void render();
+    void render(int currentPipeline);
     void cleanup();
     
     GLFWwindow* getWindowPtr() const {return(mSwapchainProvider->getWindowPtr());}
@@ -117,7 +117,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     std::unordered_map<std::string, std::vector<UniformTransformDataPtr>> mObjectTransforms;
     /// Collection of extra per-object data. Contains an entry for each object in mObjects.
     std::unordered_map<std::string, std::vector<UniformAnimShadeDataPtr>> mObjectAnimShade;
-
+    
 #ifdef CPE471_VULKAN_SAFETY_RAILS
  private:
 #else
@@ -131,8 +131,8 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     void initCommandPool(); 
     void initTextures();
     void initRenderPipeline();
-    void initFramebuffers();
-    void initCommands();
+    void initFramebuffers(int currentRenderPipeline);
+    void initCommands(int currentRenderPipeline);
     void initSync();
 
     void resetRenderSetup();
@@ -158,7 +158,9 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     std::vector<VkSemaphore> mRenderFinishSemaphores;
     std::vector<VkFence> mInFlightFences;
 
-    vkutils::VulkanBasicRasterPipelineBuilder mRenderPipeline;
+    std::vector<vkutils::VulkanBasicRasterPipelineBuilder> mRenderPipelines;
+    int mNumRenderPipelines = 2;
+    
     vkutils::VulkanDepthBundle mDepthBundle;
 
     VkCommandPool mCommandPool = VK_NULL_HANDLE;

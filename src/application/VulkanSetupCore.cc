@@ -237,12 +237,12 @@ void VulkanSetupCore::initVkLogicalDevice(){
     }
 
     std::cout << std:: endl << "--device extensions end--" << std::endl;
-    VkSurfaceKHR presentaionSurface = VK_NULL_HANDLE;
+    VkSurfaceKHR presentationSurface = VK_NULL_HANDLE;
     if(mPresentationProvider != nullptr){
         assert(mPresentationProvider->getProviderTypeBitmask() & VulkanProviderTypeEnum::PRESENTATION_BIT);
-        presentaionSurface = mPresentationProvider->getPresentationSurface();
+        presentationSurface = mPresentationProvider->getPresentationSurface();
     }
-    mDeviceBundle.logicalDevice = mDeviceBundle.physicalDevice.createLogicalDevice(getRequiredQueueFlags(), vkutils::strings_to_cstrs(deviceExtensions), presentaionSurface);
+    mDeviceBundle.logicalDevice = mDeviceBundle.physicalDevice.createLogicalDevice(getRequiredQueueFlags(), vkutils::strings_to_cstrs(deviceExtensions), presentationSurface);
 }
 
 void VulkanSetupCore::cleanup(){

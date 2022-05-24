@@ -23,8 +23,10 @@ void VulkanGraphicsApp::init(){
     initTextures();
     initUniformResources();
     initRenderPipeline();
-    initFramebuffers();
-    initCommands();
+    initFramebuffers(0); //use the frame buffers initialized in the first render pipeline creation.
+    for (int i = 0; i < 2; i++) { //initialize command buffers. One for each swapchain image, for each pipeline. Bind the ith pipeline and draw with it.
+        initCommands(i);
+    }
     initSync();
 }
 
@@ -132,14 +134,17 @@ void VulkanGraphicsApp::resetRenderSetup(){
     mSwapchainProvider->initSwapchain();
     initUniformResources();
     initRenderPipeline();
-    initFramebuffers();
-    initCommands();
+    for (int i = 0; i < 2; i++) {
+        initFramebuffers(i);
+        initCommands(i);
+    }
+    
     initSync();
 
     SwapchainProvider::sWindowFlags[mSwapchainProvider->getWindowPtr()].resized = false;
 }
 
-void VulkanGraphicsApp::render(){
+void VulkanGraphicsApp::render(int currentPipeline){
     uint32_t targetImageIndex = 0;
     size_t syncObjectIndex = mFrameNumber % IN_FLIGHT_FRAME_LIMIT;
 
@@ -153,7 +158,7 @@ void VulkanGraphicsApp::render(){
     GLFWwindow* window = mSwapchainProvider->getWindowPtr();
     if(result == VK_ERROR_OUT_OF_DATE_KHR || SwapchainProvider::sWindowFlags[window].resized){
         resetRenderSetup();
-        render();
+        render(currentPipeline);
         return;
     }else if(result == VK_SUBOPTIMAL_KHR){
         std::cerr << "Warning! Swapchain suboptimal" << std::endl;
@@ -165,7 +170,7 @@ void VulkanGraphicsApp::render(){
     VkSubmitInfo submitInfo = {
         VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr,
         1, &mImageAvailableSemaphores[syncObjectIndex], &waitStages,
-        1, &mCommandBuffers[targetImageIndex],
+        1, &mCommandBuffers[targetImageIndex + (mSwapchainFramebuffers.size() * currentPipeline) ],
         1, &mRenderFinishSemaphores[syncObjectIndex]
     };
 
@@ -238,12 +243,21 @@ void VulkanGraphicsApp::initRenderPipeline(){
     }else if(mFragmentKey.empty()){
         throw std::runtime_error("Error! No fragment shader has been set! A vertex shader must be set using setFragmentShader()!");
     }
-
-    vkutils::GraphicsPipelineConstructionSet& ctorSet =  mRenderPipeline.setupConstructionSet(VulkanDeviceHandlePair(getPrimaryDeviceBundle()), &mSwapchainProvider->getSwapchainBundle());
     
-    mDepthBundle = ctorSet.mDepthBundle = vkutils::VulkanBasicRasterPipelineBuilder::autoCreateDepthBuffer(ctorSet);
-    vkutils::VulkanBasicRasterPipelineBuilder::prepareFixedStages(ctorSet);
+    std::vector<vkutils::GraphicsPipelineConstructionSet> ctorSets;
+    
+    for (int i = 0; i < 2; i++) {
+        mRenderPipelines.emplace_back(vkutils::VulkanBasicRasterPipelineBuilder());
+        ctorSets.emplace_back(mRenderPipelines[i].setupConstructionSet(VulkanDeviceHandlePair(getPrimaryDeviceBundle()), &mSwapchainProvider->getSwapchainBundle()));
+        
+    }
+    ctorSets[1].mDepthBundle = ctorSets[0].mDepthBundle = vkutils::VulkanBasicRasterPipelineBuilder::autoCreateDepthBuffer(ctorSets[0]);
+    mDepthBundle = ctorSets[0].mDepthBundle;
+    for (int i = 0; i < 2; i++) {
+        vkutils::VulkanBasicRasterPipelineBuilder::prepareFixedStages(ctorSets[i]);
+    }
 
+    //use the same vertex and fragment shader for both pipelines for now.
     VkShaderModule vertShader = VK_NULL_HANDLE;
     VkShaderModule fragShader = VK_NULL_HANDLE;
     auto findVert = mShaderModules.find(mVertexKey);
@@ -284,44 +298,51 @@ void VulkanGraphicsApp::initRenderPipeline(){
         fragStageInfo.pName = "main";
         fragStageInfo.pSpecializationInfo = nullptr;
     }
-    ctorSet.mProgrammableStages.emplace_back(vertStageInfo);
-    ctorSet.mProgrammableStages.emplace_back(fragStageInfo);
 
-    ctorSet.mVtxInputInfo.vertexBindingDescriptionCount = 1U;
-    ctorSet.mVtxInputInfo.pVertexBindingDescriptions = &sObjVertexInput.getBindingDescription();
-    ctorSet.mVtxInputInfo.vertexAttributeDescriptionCount = sObjVertexInput.getAttributeDescriptions().size();
-    ctorSet.mVtxInputInfo.pVertexAttributeDescriptions = sObjVertexInput.getAttributeDescriptions().data();
+    for (int i = 0; i < 2; i++) {
+        ctorSets[i].mProgrammableStages.emplace_back(vertStageInfo);
+        ctorSets[i].mProgrammableStages.emplace_back(fragStageInfo);
 
-    ctorSet.mPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    ctorSet.mPipelineLayoutInfo.pNext = 0;
-    ctorSet.mPipelineLayoutInfo.flags = 0;
-    ctorSet.mPipelineLayoutInfo.setLayoutCount = 1;
-    ctorSet.mPipelineLayoutInfo.pSetLayouts = &mUniformDescriptorSetLayout;
-    ctorSet.mPipelineLayoutInfo.pushConstantRangeCount = 0;
-    ctorSet.mPipelineLayoutInfo.pPushConstantRanges = nullptr;
+        ctorSets[i].mVtxInputInfo.vertexBindingDescriptionCount = 1U;
+        ctorSets[i].mVtxInputInfo.pVertexBindingDescriptions = &sObjVertexInput.getBindingDescription();
+        ctorSets[i].mVtxInputInfo.vertexAttributeDescriptionCount = sObjVertexInput.getAttributeDescriptions().size();
+        ctorSets[i].mVtxInputInfo.pVertexAttributeDescriptions = sObjVertexInput.getAttributeDescriptions().data();
 
-    vkutils::VulkanBasicRasterPipelineBuilder::prepareViewport(ctorSet);
-    vkutils::VulkanBasicRasterPipelineBuilder::prepareRenderPass(ctorSet);
+        ctorSets[i].mPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        ctorSets[i].mPipelineLayoutInfo.pNext = 0;
+        ctorSets[i].mPipelineLayoutInfo.flags = 0;
+        ctorSets[i].mPipelineLayoutInfo.setLayoutCount = 1;
+        ctorSets[i].mPipelineLayoutInfo.pSetLayouts = &mUniformDescriptorSetLayout;
+        ctorSets[i].mPipelineLayoutInfo.pushConstantRangeCount = 0;
+        ctorSets[i].mPipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-    mRenderPipeline.build(ctorSet);
+        vkutils::VulkanBasicRasterPipelineBuilder::prepareViewport(ctorSets[i]);
+        vkutils::VulkanBasicRasterPipelineBuilder::prepareRenderPass(ctorSets[i]);
+    }
+    
+
+    mRenderPipelines[0].build(ctorSets[0]);
+    //set the polygon fill mode to do wireframe for the second pipeline.
+    ctorSets[1].mRasterInfo.polygonMode = VK_POLYGON_MODE_LINE;
+    mRenderPipelines[1].build(ctorSets[1]);
 }
 
-void VulkanGraphicsApp::initCommands(){
-    mCommandBuffers.resize(mSwapchainFramebuffers.size());
+void VulkanGraphicsApp::initCommands(int currentRenderPipeline){
+    //mCommandBuffers.resize(mSwapchainFramebuffers.size() * mNumRenderPipelines);
     VkCommandBufferAllocateInfo allocInfo;{
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.pNext = nullptr;
-        allocInfo.commandBufferCount = mCommandBuffers.size();
+        allocInfo.commandBufferCount = mSwapchainFramebuffers.size();
         allocInfo.commandPool = mCommandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     }
-
+    std::vector<VkCommandBuffer> buffers(mSwapchainFramebuffers.size());
     // Allocate a command buffer for each in-flight frame extra for transfer operations. 
-    if(vkAllocateCommandBuffers(getPrimaryDeviceBundle().logicalDevice.handle(), &allocInfo, mCommandBuffers.data()) != VK_SUCCESS){
+    if(vkAllocateCommandBuffers(getPrimaryDeviceBundle().logicalDevice.handle(), &allocInfo, buffers.data()) != VK_SUCCESS){
         throw std::runtime_error("Failed to allocate command buffers!");
     }
-
-    for(size_t i = 0; i < mCommandBuffers.size(); ++i){
+    mCommandBuffers.insert(mCommandBuffers.end(), buffers.begin(), buffers.end());
+    for(size_t i = mSwapchainFramebuffers.size() * currentRenderPipeline; i < mSwapchainFramebuffers.size() * (currentRenderPipeline + 1); ++i){
         size_t totalShapeIdx = 0;
         VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, 0 , nullptr};
         if(vkBeginCommandBuffer(mCommandBuffers[i], &beginInfo) != VK_SUCCESS){
@@ -335,15 +356,15 @@ void VulkanGraphicsApp::initCommands(){
         VkRenderPassBeginInfo renderBegin;{
             renderBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             renderBegin.pNext = nullptr;
-            renderBegin.renderPass = mRenderPipeline.getRenderpass();
-            renderBegin.framebuffer = mSwapchainFramebuffers[i];
+            renderBegin.renderPass = mRenderPipelines[currentRenderPipeline].getRenderpass();
+            renderBegin.framebuffer = mSwapchainFramebuffers[i % mSwapchainFramebuffers.size()];
             renderBegin.renderArea = {{0,0}, mSwapchainProvider->getSwapchainBundle().extent};
             renderBegin.clearValueCount = clearValues.size();
             renderBegin.pClearValues = clearValues.data();
         }
 
         vkCmdBeginRenderPass(mCommandBuffers[i], &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
-        vkCmdBindPipeline(mCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, mRenderPipeline.handle());
+        vkCmdBindPipeline(mCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, mRenderPipelines[currentRenderPipeline].handle());
         
         for(size_t objIdx = 0; objIdx < mMultiShapeObjects.size(); ++objIdx){
 
@@ -376,10 +397,10 @@ void VulkanGraphicsApp::initCommands(){
                     vkCmdBindDescriptorSets(
                         /*command buffer to bind to*/  mCommandBuffers[i],
                         /*pipeline bind point*/        VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        /*vkpipelinelayout obj*/       mRenderPipeline.getLayout(),
+                        /*vkpipelinelayout obj*/       mRenderPipelines[currentRenderPipeline].getLayout(),
                         /*firstSet*/                   0,
                         /*descriptorset count*/        1,
-                        /*pDescriptorSets*/            &mUniformDescriptorSets[i],
+                        /*pDescriptorSets*/            &mUniformDescriptorSets[i % mSwapchainFramebuffers.size()],
                         /*dynamic offset count*/       mMultiUniformBuffer->dynamicOffsetCount(),
                         /*dynamic offsets array*/      mMultiUniformBuffer->getDynamicOffsets(mMultiShapeObjects[objIdx].descriptorSetPositions()[shapeIdx])
                     );
@@ -405,7 +426,7 @@ void VulkanGraphicsApp::initCommands(){
     }
 }
 
-void VulkanGraphicsApp::initFramebuffers(){
+void VulkanGraphicsApp::initFramebuffers(int currentRenderPipeline){
     mSwapchainFramebuffers.resize(mSwapchainProvider->getSwapchainBundle().views.size());
     for(size_t i = 0; i < mSwapchainProvider->getSwapchainBundle().views.size(); ++i){
         std::array<VkImageView, 2> attachmentViews = {mSwapchainProvider->getSwapchainBundle().views[i], mDepthBundle.depthImageView};
@@ -413,7 +434,7 @@ void VulkanGraphicsApp::initFramebuffers(){
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             framebufferInfo.pNext = nullptr;
             framebufferInfo.flags = 0;
-            framebufferInfo.renderPass = mRenderPipeline.getRenderpass();
+            framebufferInfo.renderPass = mRenderPipelines[currentRenderPipeline].getRenderpass();
             framebufferInfo.attachmentCount = attachmentViews.size();
             framebufferInfo.pAttachments = attachmentViews.data();
             framebufferInfo.width = mSwapchainProvider->getSwapchainBundle().extent.width;
@@ -465,8 +486,10 @@ void VulkanGraphicsApp::cleanupSwapchainDependents(){
     vkDestroyImageView(getPrimaryDeviceBundle().logicalDevice, mDepthBundle.depthImageView, nullptr);
     vmaDestroyImage(VmaHost::getAllocator(getPrimaryDeviceBundle()), mDepthBundle.depthImage, mDepthBundle.mAllocation);
 
-    mRenderPipeline.destroy();
-
+    for (auto& pipeline : mRenderPipelines) {
+        pipeline.destroy();
+    }
+    
     if(mUniformDescriptorSetLayout != VK_NULL_HANDLE){
         vkDestroyDescriptorSetLayout(getPrimaryDeviceBundle().logicalDevice, mUniformDescriptorSetLayout, nullptr);
     }
