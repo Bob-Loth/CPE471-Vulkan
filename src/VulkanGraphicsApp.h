@@ -159,7 +159,7 @@ class VulkanGraphicsApp : virtual public VulkanAppInterface, public CoreLink{
     std::vector<VkFence> mInFlightFences;
 
     std::vector<vkutils::VulkanBasicRasterPipelineBuilder> mRenderPipelines;
-    int mNumRenderPipelines = 2;
+    const int mNumRenderPipelines = 2;
     
     vkutils::VulkanDepthBundle mDepthBundle;
 

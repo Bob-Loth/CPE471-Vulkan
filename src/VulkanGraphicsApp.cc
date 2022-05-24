@@ -24,7 +24,7 @@ void VulkanGraphicsApp::init(){
     initUniformResources();
     initRenderPipeline();
     initFramebuffers(0); //use the frame buffers initialized in the first render pipeline creation.
-    for (int i = 0; i < 2; i++) { //initialize command buffers. One for each swapchain image, for each pipeline. Bind the ith pipeline and draw with it.
+    for (int i = 0; i < mNumRenderPipelines; i++) { //initialize command buffers. One for each swapchain image, for each pipeline. Bind the ith pipeline and draw with it.
         initCommands(i);
     }
     initSync();
@@ -134,7 +134,7 @@ void VulkanGraphicsApp::resetRenderSetup(){
     mSwapchainProvider->initSwapchain();
     initUniformResources();
     initRenderPipeline();
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < mNumRenderPipelines; i++) {
         initFramebuffers(i);
         initCommands(i);
     }
@@ -246,14 +246,14 @@ void VulkanGraphicsApp::initRenderPipeline(){
     
     std::vector<vkutils::GraphicsPipelineConstructionSet> ctorSets;
     
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < mNumRenderPipelines; i++) {
         mRenderPipelines.emplace_back(vkutils::VulkanBasicRasterPipelineBuilder());
         ctorSets.emplace_back(mRenderPipelines[i].setupConstructionSet(VulkanDeviceHandlePair(getPrimaryDeviceBundle()), &mSwapchainProvider->getSwapchainBundle()));
         
     }
     ctorSets[1].mDepthBundle = ctorSets[0].mDepthBundle = vkutils::VulkanBasicRasterPipelineBuilder::autoCreateDepthBuffer(ctorSets[0]);
     mDepthBundle = ctorSets[0].mDepthBundle;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < mNumRenderPipelines; i++) {
         vkutils::VulkanBasicRasterPipelineBuilder::prepareFixedStages(ctorSets[i]);
     }
 
@@ -299,7 +299,7 @@ void VulkanGraphicsApp::initRenderPipeline(){
         fragStageInfo.pSpecializationInfo = nullptr;
     }
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < mNumRenderPipelines; i++) {
         ctorSets[i].mProgrammableStages.emplace_back(vertStageInfo);
         ctorSets[i].mProgrammableStages.emplace_back(fragStageInfo);
 
