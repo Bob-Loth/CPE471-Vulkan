@@ -187,7 +187,6 @@ void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int ac
     else if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
         //toggle fill mode.
         currentRenderPipeline = (currentRenderPipeline == 0) ? 1 : 0;
-        cout << currentRenderPipeline << endl;
     }
     //modes end
     else if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
