@@ -134,11 +134,10 @@ void VulkanGraphicsApp::resetRenderSetup(){
     mSwapchainProvider->initSwapchain();
     initUniformResources();
     initRenderPipeline();
+    initFramebuffers(0);
     for (int i = 0; i < mNumRenderPipelines; i++) {
-        initFramebuffers(i);
         initCommands(i);
     }
-    
     initSync();
 
     SwapchainProvider::sWindowFlags[mSwapchainProvider->getWindowPtr()].resized = false;
@@ -245,11 +244,9 @@ void VulkanGraphicsApp::initRenderPipeline(){
     }
     
     std::vector<vkutils::GraphicsPipelineConstructionSet> ctorSets;
-    
+    mRenderPipelines.assign(mNumRenderPipelines, vkutils::VulkanBasicRasterPipelineBuilder());
     for (int i = 0; i < mNumRenderPipelines; i++) {
-        mRenderPipelines.emplace_back(vkutils::VulkanBasicRasterPipelineBuilder());
         ctorSets.emplace_back(mRenderPipelines[i].setupConstructionSet(VulkanDeviceHandlePair(getPrimaryDeviceBundle()), &mSwapchainProvider->getSwapchainBundle()));
-        
     }
     ctorSets[1].mDepthBundle = ctorSets[0].mDepthBundle = vkutils::VulkanBasicRasterPipelineBuilder::autoCreateDepthBuffer(ctorSets[0]);
     mDepthBundle = ctorSets[0].mDepthBundle;
@@ -328,7 +325,7 @@ void VulkanGraphicsApp::initRenderPipeline(){
 }
 
 void VulkanGraphicsApp::initCommands(int currentRenderPipeline){
-    //mCommandBuffers.resize(mSwapchainFramebuffers.size() * mNumRenderPipelines);
+    mCommandBuffers.resize(mSwapchainFramebuffers.size() * currentRenderPipeline);
     VkCommandBufferAllocateInfo allocInfo;{
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.pNext = nullptr;
