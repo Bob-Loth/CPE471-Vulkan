@@ -622,7 +622,7 @@ void Application::loadShapeFilesFromPath(string dir) {
     auto isGLTF = [](fs::path de) {return de.extension() == ".gltf"; };
     auto isGLB = [](fs::path de) {return de.extension() == ".glb"; };
     auto isOBJ = [](fs::path de) {return de.extension() == ".obj"; };
-    Timer timer;
+    //Timer timer;
     for (const auto& entry : fs::directory_iterator(dir)) {
 
         if (entry.is_regular_file()) {
@@ -630,26 +630,26 @@ void Application::loadShapeFilesFromPath(string dir) {
            
             if (isGLTF(entry.path())) {
                 cout << "loading .gltf file: " << entry.path() << endl;
-                timer.start();
+                //timer.start();
                 mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), false);
-                int ms = timer.stop();
-                cout << "loading .gltf file took " << ms << " milliseconds." << endl;
+                //int ms = timer.stop();
+                //cout << "loading .gltf file took " << ms << " milliseconds." << endl;
                 mObjectNames.push_back(filenameNoExt);
             }
             else if (isGLB(entry.path())) {
                 cout << "loading .glb file: " << entry.path() << endl;
-                timer.start();
+                //timer.start();
                 mObjects[filenameNoExt] = load_gltf_to_vulkan(getPrimaryDeviceBundle(), entry.path().string(), true);
-                int ms = timer.stop();
-                cout << "loading .glb file took " << ms << " milliseconds." << endl;
+                //int ms = timer.stop();
+                //cout << "loading .glb file took " << ms << " milliseconds." << endl;
                 mObjectNames.push_back(filenameNoExt);
             }
             else if (isOBJ(entry.path())) {
                 cout << "loading .obj file: " << entry.path() << endl;
-                timer.start();
+                //timer.start();
                 mObjects[filenameNoExt] = load_obj_to_vulkan(getPrimaryDeviceBundle(), entry.path().string());
-                int ms = timer.stop();
-                cout << "loading .obj file took " << ms << " milliseconds." << endl;
+                //int ms = timer.stop();
+                //cout << "loading .obj file took " << ms << " milliseconds." << endl;
                 mObjectNames.push_back(filenameNoExt);
             }
                 
