@@ -23,14 +23,14 @@ struct WorldInfo {
     alignas(16) glm::mat4 View;
     alignas(16) glm::mat4 Perspective;
     glm::vec4 lightPosition[8] = {
-        glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f),
-        glm::vec4(1.0f, 1.0f, -1.0f, 1.0f),
-        glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f),
-        glm::vec4(1.0f, -1.0f, 1.0f, 1.0f),
-        glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),
-        glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),
-        glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f)
+        10.0f * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+        10.0f * glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f),
+        10.0f * glm::vec4(1.0f, 1.0f, -1.0f, 1.0f),
+        10.0f * glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f),
+        10.0f * glm::vec4(1.0f, -1.0f, 1.0f, 1.0f),
+        10.0f * glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),
+        10.0f * glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),
+        10.0f * glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f)
     };
 };
 

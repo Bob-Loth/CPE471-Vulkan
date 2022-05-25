@@ -731,7 +731,7 @@ void Application::initGeometry(){
     //set uniform shading data to colors defined in color map, or to some texture. The key is the name of the file, without the extension.
     setAllAnimShadeData("bunny", BlPhColors["cyan"]);
     setAllAnimShadeData("vulkan", BlPhColors["red"]);
-    setAllAnimShadeData("suzanne", AnimShadeData(TEXTURED_SHADED, 1));
+    setAllAnimShadeData("suzanne", AnimShadeData(TEXTURED_FLAT, 1));
     setAllAnimShadeData("ballTex", AnimShadeData(TEXTURED_SHADED, 0));
     setAllAnimShadeData("Cube", AnimShadeData(TEXTURED_FLAT, 2));
     setAllAnimShadeData("Lantern", AnimShadeData(TEXTURED_FLAT, 4));
