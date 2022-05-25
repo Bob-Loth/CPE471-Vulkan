@@ -1,6 +1,15 @@
 #ifndef GLSL_SHADING_INCLUDE_
 #define GLSL_SHADING_INCLUDE_
 
+const uint LIGHTS = 8;
+const uint TEXTURE_ARRAY_SIZE = 16;
+//enums
+const uint BLINN_PHONG     = 0;
+const uint NORMAL_MAP      = 1;
+const uint TEXTURE_MAP     = 2;
+const uint TEXTURED_FLAT   = 3;
+const uint TEXTURED_SHADED = 4;
+
 // https://www.youtube.com/watch?v=LKnqECcg6Gw
 #define POWMIX(_C1, _C2, _A) sqrt(mix((_C1)*(_C1), (_C2)*(_C2), (_A)))
 
@@ -10,8 +19,12 @@ const vec3 yhat = vec3(0.0, 1.0, 0.0);
 const vec3 zhat = vec3(0.0, 0.0, 1.0);
 
 /// Cheap diffuse lighting factor from a constant light source
-float shadeConstantDiffuse(in vec3 normal, in vec3 lightDir){
+float shadeConstantDiffuse(vec3 normal, vec3 lightDir){
     return(max(0.0, dot(normal, normalize(lightDir))));
+}
+
+float shadeConstantSpecular(vec3 H, vec3 normal, float shn){
+    return(pow(max(dot(H,normal),0.0f),shn));
 }
 
 const vec3 cyan = vec3(0.0, 1.0, 1.0);

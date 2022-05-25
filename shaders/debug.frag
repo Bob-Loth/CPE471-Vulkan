@@ -2,20 +2,11 @@
 #extension GL_ARB_separate_shader_objects : enable
 #include "shading.inl" // Vulkan pre-compiled glsl allows include statements!
 
-const uint LIGHTS = 8;
-const uint TEXTURE_ARRAY_SIZE = 16;
-//enums
-const uint BLINN_PHONG     = 0;
-const uint NORMAL_MAP      = 1;
-const uint TEXTURE_MAP     = 2;
-const uint TEXTURED_FLAT   = 3;
-const uint TEXTURED_SHADED = 4;
-
 
 layout(location = 0) in vec3 W_fragNor;
 layout(location = 1) in vec3 W_fragPos;
 layout(location = 2) in vec2 texCoord;
-layout(location = 3) in vec3 W_lightDir;
+layout(location = 3) in vec3 W_lightDir[LIGHTS];
 
 
 layout(location = 0) out vec4 fragColor;
@@ -41,7 +32,7 @@ layout(binding = 3) uniform sampler2D texSampler[TEXTURE_ARRAY_SIZE];
 void main(){
     vec4 texColor = texture(texSampler[uAnimShade.textureIndex + 1], texCoord);
 
-    float brightnessCoefficient = 1.0f / LIGHTS;
+    float brightnessCoefficient = 2.0f / LIGHTS;
     vec3 normal = normalize(W_fragNor);
 
     vec3 diffuse[LIGHTS];
@@ -50,9 +41,9 @@ void main(){
     vec3 viewDir = normalize(vec3(uWorld.V * vec4(W_fragPos, 1.0f)));
     
     for(int i = 0; i < LIGHTS; i++){
-        diffuse[i] = brightnessCoefficient * uAnimShade.diffuseData.xyz * max(0.0f,dot(normal, uWorld.lightPos[i].xyz));
+        diffuse[i] = brightnessCoefficient * uAnimShade.diffuseData.xyz * shadeConstantDiffuse(normal, W_lightDir[i]);
         H[i] = normalize(normalize(uWorld.lightPos[i].xyz + viewDir));
-        specular[i] = uAnimShade.specularData.xyz * pow(max(dot(H[i],normal),0.0),uAnimShade.shininess);
+        specular[i] = brightnessCoefficient * uAnimShade.specularData.xyz * shadeConstantSpecular(H[i],normal,uAnimShade.shininess);
     }
     vec3 diffuseCombined = vec3(0.0f);
     vec3 specularCombined = vec3(0.0f);

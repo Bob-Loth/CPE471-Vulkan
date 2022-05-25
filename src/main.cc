@@ -81,7 +81,7 @@ class Application : public VulkanGraphicsApp
     void initShaders();
     void initUniforms();
     void initHierarchies();
-    void shooterRender();
+    void shooterRender(float frametime);
     void shooterRightArmRender(std::shared_ptr<MatrixStack> Model);
     void shooterLeftArmRender(std::shared_ptr<MatrixStack> Model);
     void shooterLegRender(shared_ptr<MatrixStack> Model, bool isRight);
@@ -105,6 +105,8 @@ class Application : public VulkanGraphicsApp
     static glm::vec3 w;
     static glm::vec3 u;
     static bool wasdStatus[];
+    static bool ijklStatus[];
+    static glm::vec3 dummyPos;
     static glm::vec3 eye;
     static glm::vec3 look;
 };
@@ -112,11 +114,12 @@ class Application : public VulkanGraphicsApp
 float Application::smViewZoom = 7.0f;
 bool Application::smResizeFlag = false;
 bool Application::wasdStatus[] = { false, false, false, false };
+bool Application::ijklStatus[] = { false, false, false, false };
 glm::vec3 Application::eye = glm::vec3(0);
 glm::vec3 Application::look = glm::vec3(0);
 glm::vec3 Application::w = glm::vec3(0);
 glm::vec3 Application::u = glm::vec3(0);
-
+glm::vec3 Application::dummyPos = glm::vec3(0, 0, 2.0f);
 
 void Application::resizeCallback(GLFWwindow* aWindow, int aWidth, int aHeight){
     smResizeFlag = true;
@@ -218,6 +221,30 @@ void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int ac
     }
     else if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
         wasdStatus[3] = false;
+    }
+    else if (key == GLFW_KEY_I && action == GLFW_PRESS) {
+        ijklStatus[0] = true;
+    }
+    else if (key == GLFW_KEY_I && action == GLFW_RELEASE) {
+        ijklStatus[0] = false;
+    }
+    else if (key == GLFW_KEY_K && action == GLFW_PRESS) {
+        ijklStatus[1] = true;
+    }
+    else if (key == GLFW_KEY_K && action == GLFW_RELEASE) {
+        ijklStatus[1] = false;
+    }
+    else if (key == GLFW_KEY_J && action == GLFW_PRESS) {
+        ijklStatus[2] = true;
+    }
+    else if (key == GLFW_KEY_J && action == GLFW_RELEASE) {
+        ijklStatus[2] = false;
+    }
+    else if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+        ijklStatus[3] = true;
+    }
+    else if (key == GLFW_KEY_L && action == GLFW_RELEASE) {
+        ijklStatus[3] = false;
     }
     else if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
         //toggle fill mode.
@@ -391,8 +418,8 @@ void Application::updateView(float frametime){
     eye = glm::normalize(glm::vec3(cos(phi)*cos(theta), sin(theta), sin(phi)*cos(theta)));
     w = -eye;
     u = -glm::cross(w, glm::vec3(0, 1, 0));
-    look += 4.0f * frametime * (w * static_cast<float>(wasdStatus[0] - wasdStatus[1]));
-    look += 4.0f * frametime * (u * static_cast<float>(wasdStatus[2] - wasdStatus[3]));
+    look += 15.0f * frametime * (w * static_cast<float>(wasdStatus[0] - wasdStatus[1]));
+    look += 15.0f * frametime * (u * static_cast<float>(wasdStatus[2] - wasdStatus[3]));
     mWorldInfo->getStruct().View = glm::lookAt(smViewZoom * eye + look, look, glm::vec3(0.0, 1.0, 0.0));
 }
 
@@ -536,7 +563,7 @@ void Application::shooterLeftArmRender(std::shared_ptr<MatrixStack> Model) {
     Model->popMatrix();
 }
 
-void Application::shooterRender() {
+void Application::shooterRender(float frametime) {
     vector<MatrixNode> tree = mObjectHierarchies["dummy"];
     MatrixNode root = tree[12];
     
@@ -544,7 +571,9 @@ void Application::shooterRender() {
     Model->pushMatrix();
     Model->loadIdentity();
     glm::translate(glm::vec3(0.0, 0.0, 2.0))* glm::rotate(glm::pi<float>() / 2, glm::vec3(-1.0, 0.0, 0.0))* glm::scale(glm::vec3(1.0 / 25.0));
-    Model->translate(glm::vec3(0.0, 0.0, 2.0));
+    //move dummy around with ijkl to test lighting array.
+    dummyPos += glm::vec3((15.0f * frametime * static_cast<float>(ijklStatus[0] - ijklStatus[1])), 0.0f, (15.0f * frametime * static_cast<float>(ijklStatus[2] - ijklStatus[3])));
+    Model->translate(dummyPos);
     Model->rotate(glm::pi<float>() / 2, glm::vec3(-1.0, 0.0, 0.0));
     Model->scale(glm::vec3(1.0 / 25.0));
     //draw hips and belly
@@ -617,7 +646,7 @@ void Application::render(double dt){
     setAllObjectTransformData("Buggy", glm::translate(vec3(16.0, 4.0, 0.0)) * glm::scale(vec3(0.05)));
 
     //position dummy. Refer to Dummy Labels.png in the asset directory for correct indices.
-    shooterRender();
+    shooterRender(dt);
 
     // Rotate all other objects around the Vulkan logo in the center
     constexpr float angle = 2.0f*glm::pi<float>()/3.0f; // 120 degrees
@@ -731,7 +760,7 @@ void Application::initGeometry(){
     //set uniform shading data to colors defined in color map, or to some texture. The key is the name of the file, without the extension.
     setAllAnimShadeData("bunny", BlPhColors["cyan"]);
     setAllAnimShadeData("vulkan", BlPhColors["red"]);
-    setAllAnimShadeData("suzanne", AnimShadeData(TEXTURED_SHADED, 1));
+    setAllAnimShadeData("suzanne", AnimShadeData(TEXTURED_FLAT, 1));
     setAllAnimShadeData("ballTex", AnimShadeData(TEXTURED_SHADED, 0));
     setAllAnimShadeData("Cube", AnimShadeData(TEXTURED_FLAT, 2));
     setAllAnimShadeData("Lantern", AnimShadeData(TEXTURED_FLAT, 4));
