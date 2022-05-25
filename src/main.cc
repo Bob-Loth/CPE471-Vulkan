@@ -29,6 +29,7 @@ enum ShadingLayer { BLINN_PHONG, NORMAL_MAP, TEXTURE_MAP, TEXTURED_FLAT, TEXTURE
 ShadingLayer currentShadingLayer = NO_FORCED_LAYER; /*static initialization problem generates linker error, using global for now*/
 int currentRenderPipeline = 0;
 
+
 class MatrixNode
 {
 public:
@@ -61,7 +62,7 @@ class Application : public VulkanGraphicsApp
  public:
     void init();
     void run();
-    void updateView();
+    void updateView(float frametime);
     void updatePerspective();
     void cleanup();
 
@@ -101,11 +102,21 @@ class Application : public VulkanGraphicsApp
     /// Static variables to be updated by glfw callbacks. 
     static float smViewZoom;
     static bool smResizeFlag;
-    
+    static glm::vec3 w;
+    static glm::vec3 u;
+    static bool wasdStatus[];
+    static glm::vec3 eye;
+    static glm::vec3 look;
 };
 
 float Application::smViewZoom = 7.0f;
 bool Application::smResizeFlag = false;
+bool Application::wasdStatus[] = { false, false, false, false };
+glm::vec3 Application::eye = glm::vec3(0);
+glm::vec3 Application::look = glm::vec3(0);
+glm::vec3 Application::w = glm::vec3(0);
+glm::vec3 Application::u = glm::vec3(0);
+
 
 void Application::resizeCallback(GLFWwindow* aWindow, int aWidth, int aHeight){
     smResizeFlag = true;
@@ -183,6 +194,30 @@ void Application::keyCallback(GLFWwindow* aWindow, int key, int scancode, int ac
     }
     else if (key == GLFW_KEY_5 && action == GLFW_RELEASE){
         currentShadingLayer = NO_FORCED_LAYER;
+    }
+    else if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+        wasdStatus[0] = true;
+    }
+    else if (key == GLFW_KEY_W && action == GLFW_RELEASE) {
+        wasdStatus[0] = false;
+    }
+    else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+        wasdStatus[1] = true;
+    }
+    else if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
+        wasdStatus[1] = false;
+    }
+    else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+        wasdStatus[2] = true;
+    }
+    else if (key == GLFW_KEY_A && action == GLFW_RELEASE) {
+        wasdStatus[2] = false;
+    }
+    else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+        wasdStatus[3] = true;
+    }
+    else if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
+        wasdStatus[3] = false;
     }
     else if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
         //toggle fill mode.
@@ -308,7 +343,7 @@ void Application::run(){
         //set shading layers based on polled events
         observeCurrentShadingLayer();
         // Update view matrix
-        updateView();
+        updateView(globalRenderTimer.lastStepTime() * 1e-6);
 
         // Render the frame 
         globalRenderTimer.frameStart();
@@ -328,16 +363,17 @@ void Application::run(){
 }
 
 /// Update view matrix from orbit camera controls 
-void Application::updateView(){
+void Application::updateView(float frametime){
     constexpr float xSensitivity = 1.0f/glm::pi<float>();
     const float ySensitivity = xSensitivity;
     constexpr float thetaLimit = glm::radians(89.99f);
     static glm::dvec2 lastPos = glm::dvec2(std::numeric_limits<double>::quiet_NaN());
-
+    
     glm::dvec2 pos;
+    
     glfwGetCursorPos(getWindowPtr(), &pos.x, &pos.y);
     glm::vec2 delta = pos - lastPos;
-
+    
     // If this is the first frame, set delta to zero. 
     if(glm::isnan(lastPos.x)){
         delta = glm::vec2(0.0);
@@ -351,10 +387,13 @@ void Application::updateView(){
     theta = glm::clamp(theta + glm::radians(delta.y*ySensitivity), -thetaLimit, thetaLimit);
 
     assert(mWorldInfo != nullptr);
-
-    glm::vec3 eye = smViewZoom*glm::normalize(glm::vec3(cos(phi)*cos(theta), sin(theta), sin(phi)*cos(theta)));
-    glm::vec3 look = glm::vec3(0.0);
-    mWorldInfo->getStruct().View = glm::lookAt(eye, look, glm::vec3(0.0, 1.0, 0.0));
+    
+    eye = glm::normalize(glm::vec3(cos(phi)*cos(theta), sin(theta), sin(phi)*cos(theta)));
+    w = -eye;
+    u = -glm::cross(w, glm::vec3(0, 1, 0));
+    look += 4.0f * frametime * (w * static_cast<float>(wasdStatus[0] - wasdStatus[1]));
+    look += 4.0f * frametime * (u * static_cast<float>(wasdStatus[2] - wasdStatus[3]));
+    mWorldInfo->getStruct().View = glm::lookAt(smViewZoom * eye + look, look, glm::vec3(0.0, 1.0, 0.0));
 }
 
 /// Update perspective matrix
@@ -767,6 +806,6 @@ void Application::initUniforms(){
     
     VulkanGraphicsApp::initMultis(mUniformLayoutSet);
     
-    updateView();
+    updateView(0);
     updatePerspective();
 }
