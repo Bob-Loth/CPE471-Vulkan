@@ -1,5 +1,5 @@
-# CPE471-VulkanBase-ObjLoading
-
+# CPE471-Vulkan
+## a wrapper over the Vulkan API, with a reference scene and debugging shaders. Capable of loading geometry and texture coordinate data from the .obj, .gltf, and .glb file formats.
 Main reference documentation in the included [pdf](https://github.com/Bob-Loth/CPE471-VulkanBase-ObjLoading/blob/master/Development%20of%20Vulkan%20base%20code%20for%20Introduction%20to%20Computer%20Graphics.pdf)
 
 ## Cheatsheet
