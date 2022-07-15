@@ -1,5 +1,7 @@
 # CPE471-VulkanBase-ObjLoading
 
+Main reference documentation in the included [pdf](https://github.com/Bob-Loth/CPE471-VulkanBase-ObjLoading/blob/master/Development%20of%20Vulkan%20base%20code%20for%20Introduction%20to%20Computer%20Graphics.pdf)
+
 ## Cheatsheet
 
 
