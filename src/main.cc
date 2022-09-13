@@ -75,8 +75,8 @@ class Application : public VulkanGraphicsApp
     static void scrollCallback(GLFWwindow* aWindow, double aXOffset, double aYOffset);
     static void keyCallback(GLFWwindow* aWindow, int key, int scancode, int action, int mods);
  protected:
-     void loadShapeFilesFromPath(string path);
-     void initGeometry();
+    void loadShapeFilesFromPath(string path);
+    void initGeometry();
     void addMultiShapeObjects();
     void initShaders();
     void initUniforms();
@@ -87,7 +87,7 @@ class Application : public VulkanGraphicsApp
     void shooterLegRender(shared_ptr<MatrixStack> Model, bool isRight);
     shared_ptr<MatrixStack> rHandAnchor = make_shared<MatrixStack>();
     void render(double dt);
-
+    inline void setModel(int index, shared_ptr<MatrixStack> Model);
     //names of the loaded shapefiles.
     std::vector<string> mObjectNames;
     //holds the original state of each of the object's shading layer
@@ -451,25 +451,24 @@ void Application::shooterLegRender(shared_ptr<MatrixStack> Model, bool isRight) 
     Model->translate(pivotRPelvis);
     Model->rotate(flip * 0.5 * cos(2 * glm::pi<double>() * glfwGetTime()), glm::vec3(0, 1, 0));
     Model->translate(-pivotRPelvis);
-    
-    mObjectTransforms["dummy"][4 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(4 + offset).draw(prog);
-    mObjectTransforms["dummy"][5 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(5 + offset).draw(prog);
+    setModel(4 + offset, Model);
+    setModel(5 + offset, Model);
     Model->pushMatrix();
     glm::vec3 pivotRKnee = mObjects["dummy"].BBoxCenters()[3 + offset];//getCenterOfBBox(dummy->at(3 + offset));
     Model->translate(pivotRKnee);
     Model->rotate(flip * 0.25 * cos(2 * glm::pi<double>() * glfwGetTime()) + glm::pi<float>() / 8, glm::vec3(0, 1, 0));
     Model->translate(-pivotRKnee);
     
-    mObjectTransforms["dummy"][2 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(2 + offset).draw(prog);
-    mObjectTransforms["dummy"][3 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(3 + offset).draw(prog);
+    setModel(2 + offset, Model);
+    setModel(3 + offset, Model);
     Model->pushMatrix();
     glm::vec3 pivotRAnkle = mObjects["dummy"].BBoxCenters()[1 + offset];//getCenterOfBBox(dummy->at(1 + offset));
     Model->translate(pivotRAnkle);
     Model->rotate(glm::pi<float>() / 3, glm::vec3(0, 1, 0));
     Model->translate(-pivotRAnkle);
     
-    mObjectTransforms["dummy"][0 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(0 + offset).draw(prog);
-    mObjectTransforms["dummy"][1 + offset]->getStruct().Model = Model->topMatrix();//dummy->at(1 + offset).draw(prog);
+    setModel(0 + offset, Model);
+    setModel(1 + offset, Model);
     Model->popMatrix();
     Model->popMatrix();
     Model->popMatrix();
@@ -485,7 +484,7 @@ void Application::shooterRightArmRender(std::shared_ptr<MatrixStack> Model) {
     vec3 pivotTorso = mObjects["dummy"].BBoxCenters()[14];
     Model->translate(vec3(0, mirror * (1 * -0.5 + 5), 3 * -0.5));
     
-    mObjectTransforms["dummy"][armIndex]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex).draw(prog);
+    setModel(armIndex, Model);
     Model->pushMatrix();
     vec3 rShoulder = mObjects["dummy"].BBoxCenters()[armIndex];
     Model->translate(rShoulder); //center of shoulder
@@ -493,8 +492,8 @@ void Application::shooterRightArmRender(std::shared_ptr<MatrixStack> Model) {
     Model->rotate((pi<float>() / 8) * shoulderRot + (pi<float>() / 8), vec3(mirror * 0, 0, 1));
     Model->translate(-rShoulder);
     
-    mObjectTransforms["dummy"][armIndex + 1]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 1).draw(prog);
-    mObjectTransforms["dummy"][armIndex + 2]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 2).draw(prog);
+    setModel(armIndex + 1, Model);
+    setModel(armIndex + 2, Model);
     
     Model->pushMatrix();
     vec3 rElbow = mObjects["dummy"].BBoxCenters()[armIndex + 2]; //getCenterOfBBox(dummy->at(armIndex + 2));
@@ -503,8 +502,8 @@ void Application::shooterRightArmRender(std::shared_ptr<MatrixStack> Model) {
     Model->rotate((pi<float>() / 4) * elbowRot - (pi<float>() / 4), vec3(mirror * 0, 1, 0));
     Model->translate(-rElbow);
     
-    mObjectTransforms["dummy"][armIndex + 3]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 3).draw(prog);
-    mObjectTransforms["dummy"][armIndex + 4]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 4).draw(prog);
+    setModel(armIndex + 3, Model);
+    setModel(armIndex + 4, Model);
     Model->pushMatrix();
     vec3 rWrist = mObjects["dummy"].BBoxCenters()[armIndex + 4]; //getCenterOfBBox(dummy->at(armIndex + 4));
     Model->translate(rWrist); //center of wrist
@@ -515,7 +514,7 @@ void Application::shooterRightArmRender(std::shared_ptr<MatrixStack> Model) {
     rHandAnchor = make_shared<MatrixStack>(*Model); //snapshot the ctm at this point
     Model->translate(-mObjects["dummy"].BBoxCenters()[armIndex + 5]);
     
-    mObjectTransforms["dummy"][armIndex + 5]->getStruct().Model = Model->topMatrix();//dummy->at(armIndex + 5).draw(prog);
+    setModel(armIndex + 5, Model);
     Model->popMatrix();
     Model->popMatrix();
     Model->popMatrix();
@@ -527,8 +526,7 @@ void Application::shooterLeftArmRender(std::shared_ptr<MatrixStack> Model) {
     int mirror = -1;
     int armIndex = 21;
     auto bbox = [this](int index) {return mObjects["dummy"].BBoxCenters()[index]; };
-    auto setModel = [this](int index, shared_ptr<MatrixStack> Model) {mObjectTransforms["dummy"][index]->getStruct().Model = Model->topMatrix(); };
-
+    
     Model->pushMatrix();
     vec3 pivotTorso = bbox(14);
     Model->translate(vec3(0, mirror * (1 * -0.5 + 5), 3 * -0.5));
@@ -578,7 +576,7 @@ void Application::shooterRender(float frametime) {
     Model->scale(glm::vec3(1.0 / 25.0));
     //draw hips and belly
     for (size_t i = 12; i < 14; i++) {
-        mObjectTransforms["dummy"][i]->getStruct().Model = Model->topMatrix();
+        setModel(i, Model);
     }
     //draw right leg
     shooterLegRender(Model, true);
@@ -593,7 +591,7 @@ void Application::shooterRender(float frametime) {
     Model->rotate(0.2 * cos(glm::pi<double>() * glfwGetTime()), glm::vec3(0, 1, 0));
     Model->translate(-pivotBelly);
     
-    mObjectTransforms["dummy"][14]->getStruct().Model = Model->topMatrix();//dummy->at(14).draw(prog);
+    setModel(14,Model);
     ////draw the right arm
     shooterRightArmRender(Model);
     //// draw the left arm
@@ -607,12 +605,17 @@ void Application::shooterRender(float frametime) {
     Model->translate(-pivotNeck);
     
     for (size_t i = 27; i < mObjectTransforms["dummy"].size(); i++) {
-        mObjectTransforms["dummy"][i]->getStruct().Model = Model->topMatrix();//dummy->at(i).draw(prog);
+        setModel(i, Model);
     }
     Model->popMatrix();
     Model->popMatrix();
     Model->popMatrix();
 }
+
+
+inline void Application::setModel(int index, shared_ptr<MatrixStack> Model){
+    mObjectTransforms["dummy"][index]->getStruct().Model = Model->topMatrix(); };
+
 
 /// Animate the objects within our scene and then render it. 
 void Application::render(double dt){
